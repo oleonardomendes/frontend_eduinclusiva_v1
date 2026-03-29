@@ -1,3 +1,4 @@
+// src/pages/login/components/LoginForm.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -5,18 +6,18 @@ import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import Icon from '../../../components/AppIcon';
 
-// ✅ Consumo real de API
-import { api } from 'api/api';            // GET /auth/me
-import { login as loginApi } from 'api/auth'; // POST /auth/login → salva token
+// Consumo real de API
+import { api } from 'api/api';                 // GET /auth/me
+import { login as loginApi } from 'api/auth';  // POST /auth/login → salva token
 
-// Mapeia papel do backend -> role que o Router usa
+// Mapa de papel do backend -> role que o Router usa
 const roleMap = {
   secretaria: 'secretary',
   coordenadora: 'coordinator',
   professor: 'teacher',
   familia: 'parent',
-  responsável: 'parent',
   responsavel: 'parent',
+  responsável: 'parent',
 };
 
 const dashboardRoutes = {
@@ -37,8 +38,8 @@ const LoginForm = () => {
     const { name, value } = e?.target || {};
     setFormData((prev) => ({ ...prev, [name]: value }));
 
-    // limpa erro do campo ao digitar
-    if (errors?.[name]) {
+    // limpa erros ao digitar
+    if (name && errors?.[name]) {
       setErrors((prev) => ({ ...prev, [name]: '' }));
     }
     if (errors?.general) {
@@ -48,19 +49,16 @@ const LoginForm = () => {
 
   function validateForm() {
     const newErrors = {};
-
     if (!formData?.email) {
       newErrors.email = 'Email é obrigatório';
     } else if (!/\S+@\S+\.\S+/.test(formData?.email)) {
       newErrors.email = 'Email deve ter um formato válido';
     }
-
     if (!formData?.password) {
       newErrors.password = 'Senha é obrigatória';
     } else if (formData?.password?.length < 6) {
       newErrors.password = 'Senha deve ter pelo menos 6 caracteres';
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }
@@ -68,21 +66,20 @@ const LoginForm = () => {
   async function handleSubmit(e) {
     e?.preventDefault();
     if (isLoading) return;
-
     if (!validateForm()) return;
 
     setIsLoading(true);
     try {
-      // 1) Login no backend → salva token (em api/auth.js)
-      await loginApi(formData.email, formData.password); // body enviado: { email, senha }
+      // 1) Autentica → salva token
+      await loginApi(formData.email, formData.password); // envia { email, senha }
 
-      // 2) Quem sou eu → obter papel para roteamento
+      // 2) Quem sou eu → pega papel
       const { data: me } = await api.get('/auth/me'); // { id, nome, email, papel }
 
       const papel = String(me?.papel || '').toLowerCase();
       const role = roleMap[papel] || 'teacher';
 
-      // 3) Salvar currentUser no formato que seu Router usa
+      // 3) Salva currentUser no formato do Router
       const currentUser = {
         id: me?.id,
         name: me?.nome,
@@ -91,9 +88,9 @@ const LoginForm = () => {
       };
       try {
         localStorage.setItem('currentUser', JSON.stringify(currentUser));
-      } catch {/* ignore storage errors */}
+      } catch {}
 
-      // 4) Redirecionar para o dashboard correto
+      // 4) Redireciona
       navigate(dashboardRoutes[role] || '/teacher-dashboard');
     } catch (err) {
       const msg =
@@ -106,14 +103,10 @@ const LoginForm = () => {
     }
   }
 
-  function togglePasswordVisibility() {
-    setShowPassword((v) => !v);
-  }
-
   return (
     <div className="w-full max-w-md mx-auto">
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Mensagem de erro geral */}
+        {/* Erro geral */}
         {errors?.general && (
           <div className="p-4 bg-error/10 border border-error/20 rounded-lg">
             <div className="flex items-center space-x-2">
@@ -123,7 +116,7 @@ const LoginForm = () => {
           </div>
         )}
 
-        {/* E-mail */}
+        {/* Email */}
         <Input
           label="Email"
           type="email"
@@ -153,7 +146,7 @@ const LoginForm = () => {
           />
           <button
             type="button"
-            onClick={togglePasswordVisibility}
+            onClick={() => setShowPassword((v) => !v)}
             className="absolute right-3 top-9 text-muted-foreground hover:text-foreground transition-educational"
             disabled={isLoading}
             aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
