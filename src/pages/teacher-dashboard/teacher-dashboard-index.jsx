@@ -1,3 +1,4 @@
+// src/pages/teacher-dashboard/index.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainNavigation from '../../components/ui/MainNavigation';
@@ -11,8 +12,8 @@ import ActivityBuilder from './components/ActivityBuilder';
 import Icon from '../../components/AppIcon';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
+import StudentForm from '../../components/ui/StudentForm'; // ✅ novo formulário de aluno
 import { getAlunos, gerarPlanoAdaptado, uploadPDF } from '../../api/api';
-import DialogForm from "../../components/ui/DialogForm";
 
 const TeacherDashboard = () => {
   const navigate = useNavigate();
@@ -24,7 +25,7 @@ const TeacherDashboard = () => {
   const [isNavCollapsed, setIsNavCollapsed] = useState(false);
   const [generatedPlan, setGeneratedPlan] = useState(null);
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
-  const [isDialogOpen, setIsDialogOpen] = useState(false); // ✅ fix: state adicionado
+  const [isStudentFormOpen, setIsStudentFormOpen] = useState(false); // ✅ modal de cadastro de aluno
 
   // Carregar usuário e alunos
   useEffect(() => {
@@ -34,29 +35,29 @@ const TeacherDashboard = () => {
       return;
     }
     setCurrentUser(user);
-
-    const fetchAlunos = async () => {
-      try {
-        const data = await getAlunos();
-        setStudents(data);
-      } catch (error) {
-        console.error("Erro ao carregar alunos:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchAlunos();
   }, [navigate]);
+
+  const fetchAlunos = async () => {
+    try {
+      const data = await getAlunos();
+      setStudents(data);
+    } catch (error) {
+      console.error("Erro ao carregar alunos:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // ======== GERAÇÃO DE PLANO COM IA ========
   const handleGenerateAIPlan = async (aluno) => {
     try {
       const payload = {
         aluno_id: aluno.id,
-        descricao_aluno: `${aluno.name}, ${aluno.grade}, progresso atual: ${aluno.progress}%`,
-        conteudo: "Leitura e interpretação de texto",
-        materia: "Português",
-        competencia: "Compreensão textual",
+        descricao_aluno: `${aluno.nome}, ${aluno.idade ? aluno.idade + ' anos' : ''}, necessidade: ${aluno.necessidade || 'não informada'}. ${aluno.observacoes || ''}`,
+        conteudo: "Atividades adaptadas para necessidade especial",
+        materia: "Geral",
+        competencia: "Desenvolvimento pedagógico inclusivo",
       };
       const plano = await gerarPlanoAdaptado(payload);
       setGeneratedPlan({ ...plano, aluno });
@@ -67,7 +68,7 @@ const TeacherDashboard = () => {
     }
   };
 
-  // ======== UPLOAD DE PDF (para IA ler histórico) ========
+  // ======== UPLOAD DE PDF ========
   const handleUploadActivityPDF = async (file, alunoId) => {
     try {
       const res = await uploadPDF(file, alunoId);
@@ -105,7 +106,6 @@ const TeacherDashboard = () => {
     );
   }
 
-  // Mock temporário (planejamento e calendário continuam locais)
   const teachingPlan = {
     yearProgress: 68,
     annualComparison: {
@@ -148,28 +148,21 @@ const TeacherDashboard = () => {
                 </p>
               </div>
               <div className="shrink-0 flex gap-2">
+                {/* ✅ Botão para cadastrar novo aluno */}
                 <Button
                   variant="default"
-                  onClick={() => setIsDialogOpen(true)}
-                  iconName="Plus"
+                  onClick={() => setIsStudentFormOpen(true)}
+                  iconName="UserPlus"
                 >
-                  Nova Atividade
+                  Novo Aluno
                 </Button>
-
-                {isDialogOpen && (
-                  <DialogForm
-                    onClose={() => setIsDialogOpen(false)}
-                    onSuccess={(newActivity) => {
-                      console.log("Atividade criada:", newActivity);
-                    }}
-                  />
-                )}
 
                 <Button
                   variant="secondary"
-                  onClick={() => handleGenerateAIPlan(students[0])}
+                  onClick={() => students.length > 0 && handleGenerateAIPlan(students[0])}
                   iconName="Sparkles"
                   iconPosition="left"
+                  disabled={students.length === 0}
                 >
                   Gerar Plano IA
                 </Button>
@@ -202,27 +195,65 @@ const TeacherDashboard = () => {
             {activeTab === 'students' && (
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
                 <div className="xl:col-span-2">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                    {students.map((student) => (
-                      <div key={student.id} className="relative border border-border rounded-lg p-4 bg-card shadow-educational">
-                        <StudentCard student={student} />
-                        <div className="flex justify-between items-center mt-3">
-                          <Button
-                            variant="outline"
-                            onClick={() => handleGenerateAIPlan(student)}
-                          >
-                            Gerar Plano IA
-                          </Button>
-                          <input
-                            type="file"
-                            accept="application/pdf"
-                            onChange={(e) => handleUploadActivityPDF(e.target.files[0], student.id)}
-                            className="text-xs"
-                          />
+                  {students.length === 0 ? (
+                    // Estado vazio — nenhum aluno cadastrado
+                    <div className="flex flex-col items-center justify-center py-16 border-2 border-dashed border-border rounded-lg bg-muted/20">
+                      <Icon name="Users" size={48} className="text-muted-foreground mb-4 opacity-50" />
+                      <h3 className="text-lg font-medium text-foreground mb-2">
+                        Nenhum aluno cadastrado
+                      </h3>
+                      <p className="text-muted-foreground text-sm mb-4 text-center max-w-xs">
+                        Cadastre seu primeiro aluno para começar a gerar atividades e planos com IA
+                      </p>
+                      <Button
+                        variant="default"
+                        onClick={() => setIsStudentFormOpen(true)}
+                        iconName="UserPlus"
+                      >
+                        Cadastrar Primeiro Aluno
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                      {students.map((student) => (
+                        <div key={student.id} className="relative border border-border rounded-lg p-4 bg-card shadow-educational">
+                          {/* Info do aluno */}
+                          <div className="mb-3">
+                            <h3 className="font-semibold text-foreground text-base">{student.nome}</h3>
+                            {student.idade && (
+                              <p className="text-sm text-muted-foreground">{student.idade} anos</p>
+                            )}
+                            {student.escola && (
+                              <p className="text-xs text-muted-foreground">{student.escola} {student.sala ? `— ${student.sala}` : ''}</p>
+                            )}
+                            {student.necessidade && (
+                              <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs">
+                                {student.necessidade}
+                              </span>
+                            )}
+                            {student.observacoes && (
+                              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{student.observacoes}</p>
+                            )}
+                          </div>
+                          <StudentCard student={student} />
+                          <div className="flex justify-between items-center mt-3 gap-2">
+                            <Button
+                              variant="outline"
+                              onClick={() => handleGenerateAIPlan(student)}
+                            >
+                              Gerar Plano IA
+                            </Button>
+                            <input
+                              type="file"
+                              accept="application/pdf"
+                              onChange={(e) => handleUploadActivityPDF(e.target.files[0], student.id)}
+                              className="text-xs"
+                            />
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="w-full">
                   <QuickActionsPanel onActionClick={handleQuickAction} />
@@ -256,12 +287,23 @@ const TeacherDashboard = () => {
         </div>
       </main>
 
+      {/* ✅ Modal de cadastro de aluno */}
+      {isStudentFormOpen && (
+        <StudentForm
+          onClose={() => setIsStudentFormOpen(false)}
+          onSuccess={(novoAluno) => {
+            setStudents((prev) => [...prev, novoAluno]);
+            setIsStudentFormOpen(false);
+          }}
+        />
+      )}
+
       {/* Modal com o plano gerado pela IA */}
       {isPlanModalOpen && generatedPlan && (
         <Modal onClose={() => setIsPlanModalOpen(false)}>
           <div className="p-6 max-w-2xl mx-auto">
             <h2 className="text-xl font-bold mb-4 text-primary">
-              Plano Gerado para {generatedPlan.aluno.name}
+              Plano Gerado para {generatedPlan.aluno.nome}
             </h2>
             <p className="text-sm mb-2 text-muted-foreground">
               {generatedPlan.titulo}
