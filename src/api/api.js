@@ -2,8 +2,12 @@
 import axios from "axios";
 
 // mesma env que está no Vercel: VITE_API_BASE_URL
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+// ex.: https://backend-eduinclusiva-v1.onrender.com
+const RAW_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+
+// remove barra(s) à direita para evitar //v1
+const API_BASE_URL = RAW_BASE_URL.replace(/\/+$/, "");
 
 // Centralize o prefixo de versão aqui
 const API_PREFIX = "/v1";
@@ -12,24 +16,49 @@ const API_PREFIX = "/v1";
 export const api = axios.create({
   baseURL: `${API_BASE_URL}${API_PREFIX}`, // ex.: https://backend.../v1
   headers: { "Content-Type": "application/json" },
+  // opcional: habilite se quiser evitar pendurar demais:
+  // timeout: 20000,
 });
 
 // Anexa o Bearer token automaticamente (se existir)
 api.interceptors.request.use((config) => {
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-  if (token) {
-    config.headers = config.headers ?? {};
-    config.headers.Authorization = `Bearer ${token}`;
+  try {
+    const token =
+      typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    if (token) {
+      config.headers = config.headers ?? {};
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  } catch {
+    // ignore storage errors
   }
   return config;
 });
+
+// Opcional: em 401, limpa token e volta ao /login
+api.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (err?.response?.status === 401) {
+      try {
+        localStorage.removeItem("token");
+      } catch {}
+      if (typeof window !== "undefined" && location.pathname !== "/login") {
+        window.location.replace("/login");
+      }
+    }
+    return Promise.reject(err);
+  }
+);
 
 // ========== AUTENTICAÇÃO ==========
 export async function login(email, senha) {
   const { data } = await api.post("/auth/login", { email, senha });
   // Se o back devolver { access_token }, já salva localmente
   if (data?.access_token) {
-    localStorage.setItem("token", data.access_token);
+    try {
+      localStorage.setItem("token", data.access_token);
+    } catch {}
   }
   return data;
 }
