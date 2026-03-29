@@ -1,61 +1,74 @@
 // src/api/api.js
 import axios from "axios";
 
-// URL base do backend FastAPI (ajuste se estiver em nuvem)
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+// mesma env que está no Vercel: VITE_API_BASE_URL
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
-const api = axios.create({
-  baseURL: `${API_BASE_URL}/api`,
-  headers: {
-    "Content-Type": "application/json",
-  },
+// Centralize o prefixo de versão aqui
+const API_PREFIX = "/v1";
+
+// Instância Axios com base URL correta
+export const api = axios.create({
+  baseURL: `${API_BASE_URL}${API_PREFIX}`, // ex.: https://backend.../v1
+  headers: { "Content-Type": "application/json" },
+});
+
+// Anexa o Bearer token automaticamente (se existir)
+api.interceptors.request.use((config) => {
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  if (token) {
+    config.headers = config.headers ?? {};
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
 });
 
 // ========== AUTENTICAÇÃO ==========
-export const login = async (email, senha) => {
-  const response = await api.post("/auth/login", { email, senha });
-  return response.data;
-};
+export async function login(email, senha) {
+  const { data } = await api.post("/auth/login", { email, senha });
+  // Se o back devolver { access_token }, já salva localmente
+  if (data?.access_token) {
+    localStorage.setItem("token", data.access_token);
+  }
+  return data;
+}
 
 // ========== ALUNOS ==========
-export const getAlunos = async () => {
-  const response = await api.get("/alunos");
-  return response.data;
-};
+export async function getAlunos() {
+  const { data } = await api.get("/alunos");
+  return data;
+}
 
-export const createAluno = async (aluno) => {
-  const response = await api.post("/alunos", aluno);
-  return response.data;
-};
+export async function createAluno(aluno) {
+  const { data } = await api.post("/alunos", aluno);
+  return data;
+}
 
-// ========== PLANOS ==========
-export const getPlanosAluno = async (alunoId) => {
-  const response = await api.get(`/planos/${alunoId}`);
-  return response.data;
-};
+// ========== IA / PLANOS ==========
+export async function gerarPlanoAdaptado(payload) {
+  // payload: { aluno_id, descricao_aluno, conteudo, materia, competencia }
+  const { data } = await api.post("/ai/gerar_plano", payload);
+  return data;
+}
 
-export const gerarPlanoAdaptado = async (payload) => {
-  // payload esperado: { aluno_id, descricao_aluno, conteudo, materia, competencia }
-  const response = await api.post("/gerar_plano", payload);
-  return response.data;
-};
+export async function getHistoricoPlanos(alunoId) {
+  // backend: GET /v1/ai/historico/{aluno_id}
+  const { data } = await api.get(`/ai/historico/${alunoId}`);
+  return data;
+}
 
-// ========== UPLOAD DE ATIVIDADES ==========
-export const uploadPDF = async (file, alunoId) => {
+// ========== UPLOAD DE ATIVIDADES (PDF/TEXTO) ==========
+export async function uploadPDF(file, alunoId, extra = {}) {
+  // extra pode conter { tipo: 'resposta', descricao: '...' } se seu ingest aceitar
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("aluno_id", alunoId);
+  Object.entries(extra).forEach(([k, v]) => formData.append(k, v));
 
-  const response = await axios.post(`${API_BASE_URL}/api/upload_pdf`, formData, {
+  const { data } = await api.post(`/pdf/ingest?aluno_id=${alunoId}`, formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });
-  return response.data;
-};
-
-// ========== RELATÓRIOS ==========
-export const getRelatorioAluno = async (alunoId) => {
-  const response = await api.get(`/relatorios/aluno/${alunoId}`);
-  return response.data;
-};
+  return data;
+}
 
 export default api;
