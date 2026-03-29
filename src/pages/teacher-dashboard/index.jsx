@@ -10,7 +10,7 @@ import CalendarView from './components/CalendarView';
 import ActivityBuilder from './components/ActivityBuilder';
 import Icon from '../../components/AppIcon';
 import Button from '../../components/ui/Button';
-import Modal from '../../components/ui/Modal'; // adicione esse modal simples se ainda não tiver
+import Modal from '../../components/ui/Modal';
 import { getAlunos, gerarPlanoAdaptado, uploadPDF } from '../../api/api';
 import DialogForm from "../../components/ui/DialogForm";
 
@@ -24,6 +24,7 @@ const TeacherDashboard = () => {
   const [isNavCollapsed, setIsNavCollapsed] = useState(false);
   const [generatedPlan, setGeneratedPlan] = useState(null);
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false); // ✅ fix: state adicionado
 
   // Carregar usuário e alunos
   useEffect(() => {
@@ -160,7 +161,6 @@ const TeacherDashboard = () => {
                     onClose={() => setIsDialogOpen(false)}
                     onSuccess={(newActivity) => {
                       console.log("Atividade criada:", newActivity);
-                      // aqui você pode atualizar a lista de atividades exibidas
                     }}
                   />
                 )}
