@@ -1,69 +1,57 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import Icon from '../../../components/AppIcon';
 
+// ✅ Consumo real de API
+import { api } from 'api/api';            // GET /auth/me
+import { login as loginApi } from 'api/auth'; // POST /auth/login → salva token
+
+// Mapeia papel do backend -> role que o Router usa
+const roleMap = {
+  secretaria: 'secretary',
+  coordenadora: 'coordinator',
+  professor: 'teacher',
+  familia: 'parent',
+  responsável: 'parent',
+  responsavel: 'parent',
+};
+
+const dashboardRoutes = {
+  secretary: '/secretary-dashboard',
+  coordinator: '/coordinator-dashboard',
+  teacher: '/teacher-dashboard',
+  parent: '/parent-portal',
+};
+
 const LoginForm = () => {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  });
+  const [formData, setFormData] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Mock credentials for different user roles
-  const mockCredentials = {
-    'secretaria@educacao.sp.gov.br': {
-      password: 'SecretariaEdu2024!',
-      role: 'secretary',
-      name: 'Maria Silva Santos',
-      school: 'Secretaria Municipal de Educação'
-    },
-    'coordenadora@escola.sp.gov.br': {
-      password: 'CoordenadoraEdu2024!',
-      role: 'coordinator',
-      name: 'Ana Paula Oliveira',
-      school: 'EMEF Prof. João Carlos'
-    },
-    'professora@escola.sp.gov.br': {
-      password: 'ProfessoraEdu2024!',
-      role: 'teacher',
-      name: 'Carla Regina Lima',
-      school: 'EMEF Prof. João Carlos'
-    },
-    'responsavel@email.com': {
-      password: 'ResponsavelEdu2024!',
-      role: 'parent',
-      name: 'Roberto Ferreira',
-      school: 'EMEF Prof. João Carlos'
-    }
-  };
+  function handleInputChange(e) {
+    const { name, value } = e?.target || {};
+    setFormData((prev) => ({ ...prev, [name]: value }));
 
-  const handleInputChange = (e) => {
-    const { name, value } = e?.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    
-    // Clear error when user starts typing
+    // limpa erro do campo ao digitar
     if (errors?.[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
+      setErrors((prev) => ({ ...prev, [name]: '' }));
     }
-  };
+    if (errors?.general) {
+      setErrors((prev) => ({ ...prev, general: '' }));
+    }
+  }
 
-  const validateForm = () => {
+  function validateForm() {
     const newErrors = {};
 
     if (!formData?.email) {
       newErrors.email = 'Email é obrigatório';
-    } else if (!/\S+@\S+\.\S+/?.test(formData?.email)) {
+    } else if (!/\S+@\S+\.\S+/.test(formData?.email)) {
       newErrors.email = 'Email deve ter um formato válido';
     }
 
@@ -74,105 +62,107 @@ const LoginForm = () => {
     }
 
     setErrors(newErrors);
-    return Object.keys(newErrors)?.length === 0;
-  };
+    return Object.keys(newErrors).length === 0;
+  }
 
-  const handleSubmit = async (e) => {
+  async function handleSubmit(e) {
     e?.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
+    if (isLoading) return;
+
+    if (!validateForm()) return;
 
     setIsLoading(true);
+    try {
+      // 1) Login no backend → salva token (em api/auth.js)
+      await loginApi(formData.email, formData.password); // body enviado: { email, senha }
 
-    // Simulate API call delay
-    setTimeout(() => {
-      const user = mockCredentials?.[formData?.email];
-      
-      if (!user || user?.password !== formData?.password) {
-        setErrors({
-          general: 'Email ou senha incorretos. Verifique suas credenciais e tente novamente.'
-        });
-        setIsLoading(false);
-        return;
-      }
+      // 2) Quem sou eu → obter papel para roteamento
+      const { data: me } = await api.get('/auth/me'); // { id, nome, email, papel }
 
-      // Store user data in localStorage
-      localStorage.setItem('currentUser', JSON.stringify({
-        email: formData?.email,
-        role: user?.role,
-        name: user?.name,
-        school: user?.school
-      }));
+      const papel = String(me?.papel || '').toLowerCase();
+      const role = roleMap[papel] || 'teacher';
 
-      // Navigate to appropriate dashboard based on role
-      const dashboardRoutes = {
-        secretary: '/secretary-dashboard',
-        coordinator: '/coordinator-dashboard',
-        teacher: '/teacher-dashboard',
-        parent: '/parent-portal'
+      // 3) Salvar currentUser no formato que seu Router usa
+      const currentUser = {
+        id: me?.id,
+        name: me?.nome,
+        email: me?.email,
+        role,
       };
+      try {
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+      } catch {/* ignore storage errors */}
 
-      navigate(dashboardRoutes?.[user?.role]);
+      // 4) Redirecionar para o dashboard correto
+      navigate(dashboardRoutes[role] || '/teacher-dashboard');
+    } catch (err) {
+      const msg =
+        err?.response?.data?.detail ||
+        err?.message ||
+        'Email ou senha incorretos. Verifique suas credenciais e tente novamente.';
+      setErrors((prev) => ({ ...prev, general: msg }));
+    } finally {
       setIsLoading(false);
-    }, 1500);
-  };
+    }
+  }
 
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
-  };
+  function togglePasswordVisibility() {
+    setShowPassword((v) => !v);
+  }
 
   return (
     <div className="w-full max-w-md mx-auto">
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* General Error Message */}
+        {/* Mensagem de erro geral */}
         {errors?.general && (
           <div className="p-4 bg-error/10 border border-error/20 rounded-lg">
             <div className="flex items-center space-x-2">
               <Icon name="AlertCircle" size={16} className="text-error flex-shrink-0" />
-              <p className="text-sm text-error">{errors?.general}</p>
+              <p className="text-sm text-error">{errors.general}</p>
             </div>
           </div>
         )}
 
-        {/* Email Input */}
+        {/* E-mail */}
         <Input
           label="Email"
           type="email"
           name="email"
           placeholder="Digite seu email institucional"
-          value={formData?.email}
+          value={formData.email}
           onChange={handleInputChange}
-          error={errors?.email}
+          error={errors.email}
           required
           disabled={isLoading}
+          autoComplete="username"
         />
 
-        {/* Password Input */}
+        {/* Senha */}
         <div className="relative">
           <Input
             label="Senha"
-            type={showPassword ? "text" : "password"}
+            type={showPassword ? 'text' : 'password'}
             name="password"
             placeholder="Digite sua senha"
-            value={formData?.password}
+            value={formData.password}
             onChange={handleInputChange}
-            error={errors?.password}
+            error={errors.password}
             required
             disabled={isLoading}
+            autoComplete="current-password"
           />
           <button
             type="button"
             onClick={togglePasswordVisibility}
             className="absolute right-3 top-9 text-muted-foreground hover:text-foreground transition-educational"
             disabled={isLoading}
+            aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
           >
-            <Icon name={showPassword ? "EyeOff" : "Eye"} size={20} />
+            <Icon name={showPassword ? 'EyeOff' : 'Eye'} size={20} />
           </button>
         </div>
 
-        {/* Submit Button */}
+        {/* Entrar */}
         <Button
           type="submit"
           variant="default"
@@ -186,15 +176,15 @@ const LoginForm = () => {
           {isLoading ? 'Entrando...' : 'Entrar'}
         </Button>
 
-        {/* Forgot Password Link */}
+        {/* Esqueci minha senha */}
         <div className="text-center">
           <button
             type="button"
             className="text-sm text-primary hover:text-primary/80 transition-educational font-medium"
             onClick={() => {
-              // Handle forgot password - could navigate to forgot password page
               alert('Funcionalidade de recuperação de senha será implementada em breve.');
             }}
+            disabled={isLoading}
           >
             Esqueci minha senha
           </button>
