@@ -1,5 +1,5 @@
 // src/pages/teacher-dashboard/index.jsx
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import MainNavigation from "../../components/ui/MainNavigation";
@@ -18,7 +18,7 @@ import StudentForm from "../../components/ui/StudentForm";
 
 import { getAlunos, gerarPlanoAdaptado, uploadPDF } from "../../api/api";
 
-const TeacherDashboard = () => {
+export default function TeacherDashboard() {
   const navigate = useNavigate();
 
   const [currentUser, setCurrentUser] = useState(null);
@@ -26,48 +26,46 @@ const TeacherDashboard = () => {
   const [loading, setLoading] = useState(true);
 
   const [activeTab, setActiveTab] = useState("students");
-  const [isNavCollapsed, setIsNavCollapsed] = useState(false);
 
-  // Modais
+  // modais
   const [isActivityBuilderOpen, setIsActivityBuilderOpen] = useState(false);
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const [isStudentFormOpen, setIsStudentFormOpen] = useState(false);
 
-  // Plano gerado
+  // plano
   const [generatedPlan, setGeneratedPlan] = useState(null);
 
-  // ▼▼▼ Instrumentação/controle do ActivityBuilder ▼▼▼
-  const openSourceRef = useRef(null);
-  const reopenLockRef = useRef(false);
+  // ✅ CADEADO ANTI AUTO-OPEN (o segredo do fix)
+  const allowOpenRef = useRef(false);
+
+  // só libera abertura quando for ação real do usuário (clique)
+  const allowOpen = () => { allowOpenRef.current = true; };
+  const disallowOpen = () => { allowOpenRef.current = false; };
 
   const openActivityBuilder = (source) => {
-    if (reopenLockRef.current) {
-      // evita reabrir imediatamente após fechar
-      // console.log("[ActivityBuilder] open blocked by lock (source:", source, ")");
+    if (!allowOpenRef.current) {
+      console.log("[ActivityBuilder] open BLOCKED (source:", source, ")");
       return;
     }
-    openSourceRef.current = source || "desconhecido";
-    // console.log("[ActivityBuilder] open by →", openSourceRef.current);
+    console.log("[ActivityBuilder] open by →", source);
     setIsActivityBuilderOpen(true);
   };
 
   const closeActivityBuilder = () => {
-    // console.log("[ActivityBuilder] close by → user/UI");
+    console.log("[ActivityBuilder] close by → user/UI");
     setIsActivityBuilderOpen(false);
-    reopenLockRef.current = true;
-    setTimeout(() => {
-      reopenLockRef.current = false;
-    }, 1500);
+    disallowOpen(); // evita reabrir sem clique do usuário
   };
-  // ▲▲▲ FIM: Instrumentação/controle do ActivityBuilder ▲▲▲
 
   // =============================
-  // Carregar usuário e alunos
+  // Autorização + carregar alunos
   // =============================
   useEffect(() => {
+    // garante que o cadeado começa fechado
+    disallowOpen();
+
     try {
       const user = JSON.parse(localStorage.getItem("currentUser") || "{}");
-      // Segurança: somente professor neste dashboard
       if (!user?.role || user.role !== "teacher") {
         navigate("/login");
         return;
@@ -77,6 +75,7 @@ const TeacherDashboard = () => {
     } catch {
       navigate("/login");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
   async function fetchAlunos() {
@@ -91,24 +90,21 @@ const TeacherDashboard = () => {
   }
 
   // =============================
-  // Geração de plano com IA
+  // IA: gerar plano
   // =============================
   async function handleGenerateAIPlan(aluno) {
     try {
       const payload = {
         aluno_id: aluno.id,
-        descricao_aluno: `${aluno.nome}${
-          aluno.idade ? `, ${aluno.idade} anos` : ""
-        }, necessidade: ${aluno.necessidade || "não informada"}. ${
-          aluno.observacoes || ""
-        }`,
+        descricao_aluno: `${aluno.nome}${aluno.idade ? `, ${aluno.idade} anos` : ""}, necessidade: ${
+          aluno.necessidade || "não informada"
+        }. ${aluno.observacoes || ""}`,
         conteudo: "Atividades adaptadas para necessidade especial",
         materia: "Geral",
         competencia: "Desenvolvimento pedagógico inclusivo",
       };
 
       const plano = await gerarPlanoAdaptado(payload);
-      // Guarda plano + aluno para exibir no modal
       setGeneratedPlan({ ...plano, aluno });
       setIsPlanModalOpen(true);
     } catch (err) {
@@ -118,13 +114,12 @@ const TeacherDashboard = () => {
   }
 
   // =============================
-  // Upload de PDF
+  // Upload PDF
   // =============================
   async function handleUploadActivityPDF(file, alunoId) {
     try {
       if (!file) return;
-      const res = await uploadPDF(file, alunoId);
-      console.log("Upload PDF:", res);
+      await uploadPDF(file, alunoId);
       alert("Atividade enviada e indexada com sucesso!");
     } catch (err) {
       console.error("Erro no upload do PDF:", err);
@@ -132,39 +127,34 @@ const TeacherDashboard = () => {
     }
   }
 
+  // =============================
+  // Quick Actions
+  // =============================
   function handleQuickAction(action) {
     switch (action) {
       case "createActivity":
+        allowOpen();                     // ✅ libera
         openActivityBuilder("QuickActionsPanel");
         break;
       case "generateAIPlan":
         if (students.length > 0) handleGenerateAIPlan(students[0]);
         break;
       default:
-        console.log("Action not implemented:", action);
+        console.log("Ação não implementada:", action);
     }
-  }
-
-  function handleToggleNavCollapse() {
-    setIsNavCollapsed((v) => !v);
   }
 
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <Icon
-            name="Loader2"
-            size={32}
-            className="animate-spin text-primary mx-auto mb-4"
-          />
-          <p className="text-muted-foreground">Carregando dados…</p>
+          <Icon name="Loader2" size={32} className="animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Carregando dados...</p>
         </div>
       </div>
     );
   }
 
-  // Dados de exemplo do painel (mantidos)
   const teachingPlan = {
     yearProgress: 68,
     annualComparison: {
@@ -190,7 +180,8 @@ const TeacherDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <MainNavigation onToggleCollapse={handleToggleNavCollapse} />
+      <MainNavigation />
+
       <main className="pt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <BreadcrumbNavigation />
@@ -208,7 +199,6 @@ const TeacherDashboard = () => {
               </div>
 
               <div className="shrink-0 flex gap-2">
-                {/* Cadastrar aluno */}
                 <Button
                   variant="default"
                   onClick={() => setIsStudentFormOpen(true)}
@@ -217,12 +207,9 @@ const TeacherDashboard = () => {
                   Novo Aluno
                 </Button>
 
-                {/* Gerar Plano IA (atalho com 1º aluno) */}
                 <Button
                   variant="secondary"
-                  onClick={() =>
-                    students.length > 0 && handleGenerateAIPlan(students[0])
-                  }
+                  onClick={() => students.length > 0 && handleGenerateAIPlan(students[0])}
                   iconName="Sparkles"
                   iconPosition="left"
                   disabled={students.length === 0}
@@ -239,6 +226,7 @@ const TeacherDashboard = () => {
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
+                  type="button"
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center space-x-2 py-3 sm:py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap transition-educational ${
                     activeTab === tab.id
@@ -253,19 +241,14 @@ const TeacherDashboard = () => {
             </nav>
           </div>
 
-          {/* Conteúdo das abas */}
+          {/* Conteúdo */}
           <div className="space-y-8">
             {activeTab === "students" && (
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
                 <div className="xl:col-span-2">
                   {students.length === 0 ? (
-                    // Estado vazio — nenhum aluno cadastrado
                     <div className="flex flex-col items-center justify-center py-16 border-2 border-dashed border-border rounded-lg bg-muted/20">
-                      <Icon
-                        name="Users"
-                        size={48}
-                        className="text-muted-foreground mb-4 opacity-50"
-                      />
+                      <Icon name="Users" size={48} className="text-muted-foreground mb-4 opacity-50" />
                       <h3 className="text-lg font-medium text-foreground mb-2">
                         Nenhum aluno cadastrado
                       </h3>
@@ -283,25 +266,11 @@ const TeacherDashboard = () => {
                   ) : (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                       {students.map((student) => (
-                        <div
-                          key={student.id}
-                          className="relative border border-border rounded-lg p-4 bg-card shadow-educational"
-                        >
-                          {/* Info do aluno */}
+                        <div key={student.id} className="relative border border-border rounded-lg p-4 bg-card shadow-educational">
                           <div className="mb-3">
-                            <h3 className="font-semibold text-foreground text-base">
-                              {student.nome}
-                            </h3>
+                            <h3 className="font-semibold text-foreground text-base">{student.nome}</h3>
                             {student.idade && (
-                              <p className="text-sm text-muted-foreground">
-                                {student.idade} anos
-                              </p>
-                            )}
-                            {student.escola && (
-                              <p className="text-xs text-muted-foreground">
-                                {student.escola}{" "}
-                                {student.sala ? `— ${student.sala}` : ""}
-                              </p>
+                              <p className="text-sm text-muted-foreground">{student.idade} anos</p>
                             )}
                             {student.necessidade && (
                               <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs">
@@ -328,12 +297,7 @@ const TeacherDashboard = () => {
                             <input
                               type="file"
                               accept="application/pdf"
-                              onChange={(e) =>
-                                handleUploadActivityPDF(
-                                  e.target.files && e.target.files[0],
-                                  student.id
-                                )
-                              }
+                              onChange={(e) => handleUploadActivityPDF(e.target.files?.[0], student.id)}
                               className="text-xs"
                             />
                           </div>
@@ -363,7 +327,11 @@ const TeacherDashboard = () => {
             {activeTab === "activities" && (
               <ActivityTemplateLibrary
                 templates={[]}
-                onSelectTemplate={() => {}}
+                onSelectTemplate={(tpl) => {
+                  // ✅ só abre se houver clique do usuário
+                  allowOpen();
+                  openActivityBuilder("ActivityTemplateLibrary");
+                }}
               />
             )}
 
@@ -378,7 +346,7 @@ const TeacherDashboard = () => {
         </div>
       </main>
 
-      {/* Modal: cadastro de aluno (componente próprio) */}
+      {/* Modal: cadastro de aluno */}
       {isStudentFormOpen && (
         <StudentForm
           onClose={() => setIsStudentFormOpen(false)}
@@ -389,53 +357,30 @@ const TeacherDashboard = () => {
         />
       )}
 
-      {/* Modal: Plano gerado pela IA (USANDO MODAL CONTROLADO) */}
+      {/* Modal: Plano IA */}
       <Modal
         open={isPlanModalOpen && !!generatedPlan}
         onClose={() => setIsPlanModalOpen(false)}
-        title={
-          generatedPlan
-            ? `Plano Gerado para ${generatedPlan.aluno.nome}`
-            : "Plano Gerado"
-        }
+        title={generatedPlan ? `Plano Gerado para ${generatedPlan.aluno.nome}` : "Plano Gerado"}
         size="md"
       >
         {generatedPlan && (
           <div className="max-w-2xl mx-auto">
-            <p className="text-sm mb-2 text-muted-foreground">
-              {generatedPlan.titulo}
-            </p>
-
+            <p className="text-sm mb-2 text-muted-foreground">{generatedPlan.titulo}</p>
             <div className="space-y-2">
               {(generatedPlan.atividades || []).map((a, i) => (
                 <div key={i} className="p-2 border rounded bg-muted">
                   <p className="font-medium">{a.tipo}</p>
                   <p className="text-sm">{a.descricao}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Duração: {a.duracao} min
-                  </p>
+                  <p className="text-xs text-muted-foreground">Duração: {a.duracao} min</p>
                 </div>
               ))}
             </div>
-
-            {generatedPlan.recomendacoes &&
-              generatedPlan.recomendacoes.length > 0 && (
-                <div className="mt-4">
-                  <h3 className="font-semibold text-foreground mb-1">
-                    Recomendações:
-                  </h3>
-                  <ul className="list-disc list-inside text-sm text-muted-foreground">
-                    {generatedPlan.recomendacoes.map((r, i) => (
-                      <li key={i}>{r}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
           </div>
         )}
       </Modal>
 
-      {/* Modal: Nova Atividade (ActivityBuilder deve usar Modal controlado internamente) */}
+      {/* Modal: Nova Atividade */}
       <ActivityBuilder
         isOpen={isActivityBuilderOpen}
         onClose={closeActivityBuilder}
@@ -445,6 +390,4 @@ const TeacherDashboard = () => {
       />
     </div>
   );
-};
-
-export default TeacherDashboard;
+}

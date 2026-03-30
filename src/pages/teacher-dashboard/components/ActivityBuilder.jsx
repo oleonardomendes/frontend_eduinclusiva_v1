@@ -13,7 +13,7 @@ import Modal from '../../../components/ui/Modal';
  * - onClose: () => void
  * - onSave: (data) => void   // recebe os dados já "limpos"
  *
- * (Opcional) Props extras – não obrigatórias:
+ * (Opcional):
  * - initialData: objeto para pré-preencher o formulário
  * - resetOnClose: boolean – se true, reseta o formulário ao fechar
  */
@@ -40,27 +40,40 @@ export default function ActivityBuilder({
 
   const [activityData, setActivityData] = useState(defaults);
 
-  // Pré-preencher quando initialData mudar (opcional)
+  // ✅ Só prepara/preenche dados quando o modal estiver ABERTO
   useEffect(() => {
+    if (!isOpen) return;
+
     if (initialData && typeof initialData === 'object') {
       setActivityData((prev) => ({
         ...prev,
         ...initialData,
-        objectives: Array.isArray(initialData.objectives) && initialData.objectives.length ? initialData.objectives : [''],
-        materials: Array.isArray(initialData.materials) && initialData.materials.length ? initialData.materials : [''],
-        instructions: Array.isArray(initialData.instructions) && initialData.instructions.length ? initialData.instructions : [''],
-        adaptations: Array.isArray(initialData.adaptations) && initialData.adaptations.length ? initialData.adaptations : [''],
+        objectives:
+          Array.isArray(initialData.objectives) && initialData.objectives.length
+            ? initialData.objectives
+            : [''],
+        materials:
+          Array.isArray(initialData.materials) && initialData.materials.length
+            ? initialData.materials
+            : [''],
+        instructions:
+          Array.isArray(initialData.instructions) && initialData.instructions.length
+            ? initialData.instructions
+            : [''],
+        adaptations:
+          Array.isArray(initialData.adaptations) && initialData.adaptations.length
+            ? initialData.adaptations
+            : [''],
         assessmentCriteria:
           Array.isArray(initialData.assessmentCriteria) && initialData.assessmentCriteria.length
             ? initialData.assessmentCriteria
             : [''],
       }));
     } else {
-      // se não veio initialData, mantém defaults
       setActivityData(defaults);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialData, isOpen]);
+  }, [isOpen, initialData]);
 
   const categories = ['Matemática', 'Português', 'Ciências', 'Arte', 'Educação Física', 'Socialização'];
   const difficulties = ['Fácil', 'Médio', 'Difícil'];
@@ -76,21 +89,21 @@ export default function ActivityBuilder({
   function handleArrayChange(field, index, value) {
     setActivityData((prev) => ({
       ...prev,
-      [field]: (prev?.[field] || []).map((item, i) => (i === index ? value : item)),
+      [field]: (prev[field] || []).map((item, i) => (i === index ? value : item)),
     }));
   }
 
   function addArrayItem(field) {
     setActivityData((prev) => ({
       ...prev,
-      [field]: [...(prev?.[field] || []), ''],
+      [field]: [...(prev[field] || []), ''],
     }));
   }
 
   function removeArrayItem(field, index) {
     setActivityData((prev) => ({
       ...prev,
-      [field]: (prev?.[field] || []).filter((_, i) => i !== index),
+      [field]: (prev[field] || []).filter((_, i) => i !== index),
     }));
   }
 
@@ -103,7 +116,7 @@ export default function ActivityBuilder({
     e?.preventDefault();
 
     // Validação mínima
-    if (!activityData?.title?.trim() || !activityData?.description?.trim()) {
+    if (!activityData.title.trim() || !activityData.description.trim()) {
       alert('Por favor, preencha o título e a descrição da atividade.');
       return;
     }
@@ -111,31 +124,28 @@ export default function ActivityBuilder({
     // Limpeza de itens vazios nos arrays
     const cleanedData = {
       ...activityData,
-      // tenta converter duration para número (se for numérico)
       duration:
-        typeof activityData.duration === 'string' && activityData.duration.trim() !== '' && !Number.isNaN(Number(activityData.duration))
+        typeof activityData.duration === 'string' &&
+        activityData.duration.trim() !== '' &&
+        !Number.isNaN(Number(activityData.duration))
           ? Number(activityData.duration)
           : activityData.duration,
-      objectives: (activityData?.objectives || []).filter((v) => String(v || '').trim()),
-      materials: (activityData?.materials || []).filter((v) => String(v || '').trim()),
-      instructions: (activityData?.instructions || []).filter((v) => String(v || '').trim()),
-      adaptations: (activityData?.adaptations || []).filter((v) => String(v || '').trim()),
-      assessmentCriteria: (activityData?.assessmentCriteria || []).filter((v) => String(v || '').trim()),
+      objectives: (activityData.objectives || []).filter((v) => String(v || '').trim()),
+      materials: (activityData.materials || []).filter((v) => String(v || '').trim()),
+      instructions: (activityData.instructions || []).filter((v) => String(v || '').trim()),
+      adaptations: (activityData.adaptations || []).filter((v) => String(v || '').trim()),
+      assessmentCriteria: (activityData.assessmentCriteria || []).filter((v) => String(v || '').trim()),
     };
 
-    // Retorna para o pai
     onSave?.(cleanedData);
-    handleClose(); // fecha ao salvar
+    handleClose(); // ✅ fecha ao salvar
   }
+
+  // ✅ NÃO monta nada quando fechado (isso evita efeitos de mount/re-render após login)
+  if (!isOpen) return null;
 
   return (
     <Modal open={isOpen} onClose={handleClose} title="Nova Atividade" size="lg">
-      {/* Se quiser um subtítulo auxiliar, descomente:
-      <div className="mb-2 text-sm text-muted-foreground">
-        Crie uma atividade personalizada para seus alunos
-      </div>
-      */}
-
       <form onSubmit={handleSave} className="space-y-6 max-h-[70vh] overflow-y-auto pr-1">
         {/* Informações básicas */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -157,9 +167,7 @@ export default function ActivityBuilder({
               className="w-full px-3 py-2 border border-border rounded-lg bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             >
               {categories.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
+                <option key={c} value={c}>{c}</option>
               ))}
             </select>
           </div>
@@ -174,9 +182,7 @@ export default function ActivityBuilder({
               className="w-full px-3 py-2 border border-border rounded-lg bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             >
               {difficulties.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
+                <option key={d} value={d}>{d}</option>
               ))}
             </select>
           </div>
@@ -199,9 +205,7 @@ export default function ActivityBuilder({
               className="w-full px-3 py-2 border border-border rounded-lg bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             >
               {ageRanges.map((a) => (
-                <option key={a} value={a}>
-                  {a}
-                </option>
+                <option key={a} value={a}>{a}</option>
               ))}
             </select>
           </div>
@@ -245,7 +249,7 @@ export default function ActivityBuilder({
             </div>
 
             <div className="space-y-2">
-              {(activityData?.[field] || []).map((item, index) => (
+              {(activityData[field] || []).map((item, index) => (
                 <div key={index} className="flex items-center space-x-2">
                   <input
                     type="text"
@@ -254,7 +258,7 @@ export default function ActivityBuilder({
                     placeholder={`${title.toLowerCase()} ${index + 1}`}
                     className="flex-1 px-3 py-2 border border-border rounded-lg bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   />
-                  {(activityData?.[field]?.length || 0) > 1 && (
+                  {(activityData[field]?.length || 0) > 1 && (
                     <Button
                       type="button"
                       variant="ghost"
@@ -271,7 +275,7 @@ export default function ActivityBuilder({
           </div>
         ))}
 
-        {/* Footer do formulário */}
+        {/* Footer */}
         <div className="flex items-center justify-end gap-3 pt-2">
           <Button type="button" variant="outline" onClick={handleClose}>
             Cancelar

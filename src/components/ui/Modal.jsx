@@ -1,10 +1,12 @@
+// src/components/ui/Modal.jsx
 import React, { useEffect } from "react";
 import Icon from "../AppIcon";
 
 /**
- * Modal controlado
- * - Renderiza somente quando open === true
- * - Fecha em overlay, botão X e tecla ESC
+ * Modal controlado:
+ * - Só renderiza quando open === true
+ * - Fecha no overlay, no X e com tecla ESC
+ * - Limita altura e faz scroll interno (não fica maior que a tela)
  */
 export default function Modal({
   open = false,
@@ -14,10 +16,8 @@ export default function Modal({
   className = "",
   children,
 }) {
-  // não renderiza nada quando fechado
   if (!open) return null;
 
-  // Bloquear scroll do body somente quando aberto
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -42,14 +42,20 @@ export default function Modal({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fade-in"
-      onClick={onClose}                // clique no overlay fecha
+      onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-label={title}
     >
       <div
-        className={`relative w-full ${sizeClasses[size]} mx-4 sm:mx-6 bg-card text-foreground rounded-2xl shadow-educational border border-border animate-scale-in ${className}`}
-        onClick={(e) => e.stopPropagation()} // impede fechar ao clicar dentro
+        className={[
+          "relative w-full",
+          sizeClasses[size],
+          "mx-4 sm:mx-6 bg-card text-foreground rounded-2xl shadow-educational border border-border animate-scale-in",
+          "max-h-[90vh] overflow-hidden", // limita altura do container
+          className,
+        ].join(" ")}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
@@ -66,8 +72,10 @@ export default function Modal({
           </button>
         </div>
 
-        {/* Body */}
-        <div className="p-5 overflow-y-auto max-h-[80vh]">{children}</div>
+        {/* Body com scroll interno */}
+        <div className="p-5 overflow-y-auto max-h-[calc(90vh-4rem)]">
+          {children}
+        </div>
       </div>
     </div>
   );
