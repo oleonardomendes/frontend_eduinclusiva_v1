@@ -1,12 +1,30 @@
 // src/pages/teacher-dashboard/components/ActivityBuilder.jsx
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import Modal from '../../../components/ui/Modal';
 
-export default function ActivityBuilder({ isOpen, onClose, onSave }) {
-  const [activityData, setActivityData] = useState({
+/**
+ * Construtor de Atividades
+ *
+ * Props:
+ * - isOpen: boolean (controla exibição do modal)
+ * - onClose: () => void
+ * - onSave: (data) => void   // recebe os dados já "limpos"
+ *
+ * (Opcional) Props extras – não obrigatórias:
+ * - initialData: objeto para pré-preencher o formulário
+ * - resetOnClose: boolean – se true, reseta o formulário ao fechar
+ */
+export default function ActivityBuilder({
+  isOpen,
+  onClose,
+  onSave,
+  initialData = null,
+  resetOnClose = false,
+}) {
+  const defaults = {
     title: '',
     description: '',
     category: 'Matemática',
@@ -18,7 +36,31 @@ export default function ActivityBuilder({ isOpen, onClose, onSave }) {
     instructions: [''],
     adaptations: [''],
     assessmentCriteria: [''],
-  });
+  };
+
+  const [activityData, setActivityData] = useState(defaults);
+
+  // Pré-preencher quando initialData mudar (opcional)
+  useEffect(() => {
+    if (initialData && typeof initialData === 'object') {
+      setActivityData((prev) => ({
+        ...prev,
+        ...initialData,
+        objectives: Array.isArray(initialData.objectives) && initialData.objectives.length ? initialData.objectives : [''],
+        materials: Array.isArray(initialData.materials) && initialData.materials.length ? initialData.materials : [''],
+        instructions: Array.isArray(initialData.instructions) && initialData.instructions.length ? initialData.instructions : [''],
+        adaptations: Array.isArray(initialData.adaptations) && initialData.adaptations.length ? initialData.adaptations : [''],
+        assessmentCriteria:
+          Array.isArray(initialData.assessmentCriteria) && initialData.assessmentCriteria.length
+            ? initialData.assessmentCriteria
+            : [''],
+      }));
+    } else {
+      // se não veio initialData, mantém defaults
+      setActivityData(defaults);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialData, isOpen]);
 
   const categories = ['Matemática', 'Português', 'Ciências', 'Arte', 'Educação Física', 'Socialização'];
   const difficulties = ['Fácil', 'Médio', 'Difícil'];
@@ -34,7 +76,7 @@ export default function ActivityBuilder({ isOpen, onClose, onSave }) {
   function handleArrayChange(field, index, value) {
     setActivityData((prev) => ({
       ...prev,
-      [field]: prev?.[field]?.map((item, i) => (i === index ? value : item)),
+      [field]: (prev?.[field] || []).map((item, i) => (i === index ? value : item)),
     }));
   }
 
@@ -53,8 +95,7 @@ export default function ActivityBuilder({ isOpen, onClose, onSave }) {
   }
 
   function handleClose() {
-    // Se quiser limpar ao fechar, descomente:
-    // setActivityData({ ...activityData, title: '', description: '' });
+    if (resetOnClose) setActivityData(defaults);
     onClose?.();
   }
 
@@ -70,30 +111,37 @@ export default function ActivityBuilder({ isOpen, onClose, onSave }) {
     // Limpeza de itens vazios nos arrays
     const cleanedData = {
       ...activityData,
-      objectives: (activityData?.objectives || []).filter((v) => v?.trim()),
-      materials: (activityData?.materials || []).filter((v) => v?.trim()),
-      instructions: (activityData?.instructions || []).filter((v) => v?.trim()),
-      adaptations: (activityData?.adaptations || []).filter((v) => v?.trim()),
-      assessmentCriteria: (activityData?.assessmentCriteria || []).filter((v) => v?.trim()),
+      // tenta converter duration para número (se for numérico)
+      duration:
+        typeof activityData.duration === 'string' && activityData.duration.trim() !== '' && !Number.isNaN(Number(activityData.duration))
+          ? Number(activityData.duration)
+          : activityData.duration,
+      objectives: (activityData?.objectives || []).filter((v) => String(v || '').trim()),
+      materials: (activityData?.materials || []).filter((v) => String(v || '').trim()),
+      instructions: (activityData?.instructions || []).filter((v) => String(v || '').trim()),
+      adaptations: (activityData?.adaptations || []).filter((v) => String(v || '').trim()),
+      assessmentCriteria: (activityData?.assessmentCriteria || []).filter((v) => String(v || '').trim()),
     };
 
     // Retorna para o pai
     onSave?.(cleanedData);
-    onClose?.(); // ✅ fecha ao salvar
+    handleClose(); // fecha ao salvar
   }
 
   return (
     <Modal open={isOpen} onClose={handleClose} title="Nova Atividade" size="lg">
-      {/* Header adicional (opcional) — o título já está no Modal */}
-      {/* <div className="mb-2 text-sm text-muted-foreground">
+      {/* Se quiser um subtítulo auxiliar, descomente:
+      <div className="mb-2 text-sm text-muted-foreground">
         Crie uma atividade personalizada para seus alunos
-      </div> */}
+      </div>
+      */}
 
       <form onSubmit={handleSave} className="space-y-6 max-h-[70vh] overflow-y-auto pr-1">
         {/* Informações básicas */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input
             label="Título da Atividade"
+            name="title"
             type="text"
             placeholder="Ex: Leitura de Palavras Simples"
             value={activityData.title}
@@ -135,6 +183,7 @@ export default function ActivityBuilder({ isOpen, onClose, onSave }) {
 
           <Input
             label="Duração (minutos)"
+            name="duration"
             type="number"
             placeholder="30"
             value={activityData.duration}

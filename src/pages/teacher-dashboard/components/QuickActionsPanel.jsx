@@ -1,57 +1,65 @@
-import React from 'react';
-import Icon from '../../../components/AppIcon';
+import React from "react";
+import Icon from "../../../components/AppIcon";
 
+/**
+ * Painel de ações rápidas.
+ * NÃO abre nada sozinho — só dispara onActionClick(...) no clique do usuário.
+ */
+function QuickActionsPanel({ onActionClick }) {
+  // se o pai não passar, evita crash
+  const handle = (action) => {
+    if (typeof onActionClick === "function") onActionClick(action);
+  };
 
-const QuickActionsPanel = ({ onActionClick }) => {
   const quickActions = [
     {
-      id: 'new-activity',
-      title: 'Nova Atividade',
-      description: 'Criar atividade personalizada',
-      icon: 'Plus',
-      color: 'bg-primary text-primary-foreground',
-      action: 'createActivity'
+      id: "new-activity",
+      title: "Nova Atividade",
+      description: "Criar atividade personalizada",
+      icon: "Plus",
+      color: "bg-primary text-primary-foreground",
+      action: "createActivity",
     },
     {
-      id: 'assessment',
-      title: 'Avaliação',
-      description: 'Atualizar nível do aluno',
-      icon: 'ClipboardCheck',
-      color: 'bg-secondary text-secondary-foreground',
-      action: 'updateAssessment'
+      id: "assessment",
+      title: "Avaliação",
+      description: "Atualizar nível do aluno",
+      icon: "ClipboardCheck",
+      color: "bg-secondary text-secondary-foreground",
+      action: "updateAssessment",
     },
     {
-      id: 'progress-report',
-      title: 'Relatório',
-      description: 'Gerar relatório de progresso',
-      icon: 'FileText',
-      color: 'bg-accent text-accent-foreground',
-      action: 'generateReport'
+      id: "progress-report",
+      title: "Relatório",
+      description: "Gerar relatório de progresso",
+      icon: "FileText",
+      color: "bg-accent text-accent-foreground",
+      action: "generateReport",
     },
     {
-      id: 'parent-communication',
-      title: 'Comunicar Pais',
-      description: 'Enviar atualização aos responsáveis',
-      icon: 'MessageSquare',
-      color: 'bg-success text-success-foreground',
-      action: 'communicateParents'
+      id: "parent-communication",
+      title: "Comunicar Pais",
+      description: "Enviar atualização aos responsáveis",
+      icon: "MessageSquare",
+      color: "bg-success text-success-foreground",
+      action: "communicateParents",
     },
     {
-      id: 'lesson-plan',
-      title: 'Plano de Aula',
-      description: 'Criar novo plano de aula',
-      icon: 'Calendar',
-      color: 'bg-warning text-warning-foreground',
-      action: 'createLessonPlan'
+      id: "lesson-plan",
+      title: "Plano de Aula",
+      description: "Criar novo plano de aula",
+      icon: "Calendar",
+      color: "bg-warning text-warning-foreground",
+      action: "createLessonPlan",
     },
     {
-      id: 'student-profile',
-      title: 'Perfil do Aluno',
-      description: 'Visualizar ou editar perfil',
-      icon: 'User',
-      color: 'bg-muted text-muted-foreground',
-      action: 'viewStudentProfile'
-    }
+      id: "student-profile",
+      title: "Perfil do Aluno",
+      description: "Visualizar ou editar perfil",
+      icon: "User",
+      color: "bg-muted text-muted-foreground",
+      action: "viewStudentProfile",
+    },
   ];
 
   return (
@@ -60,30 +68,35 @@ const QuickActionsPanel = ({ onActionClick }) => {
         <h2 className="text-lg font-semibold text-foreground">Ações Rápidas</h2>
         <Icon name="Zap" size={20} className="text-primary" />
       </div>
+
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-        {quickActions?.map((action) => (
+        {quickActions.map((item) => (
           <button
-            key={action?.id}
-            onClick={() => onActionClick(action?.action)}
+            key={item.id}
+            type="button"
+            onClick={() => handle(item.action)}
             className="group p-4 border border-border rounded-lg hover:border-primary/50 transition-educational hover-scale text-left"
           >
             <div className="flex items-start space-x-3">
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${action?.color} group-hover:scale-110 transition-transform`}>
-                <Icon name={action?.icon} size={20} />
+              <div
+                className={`w-10 h-10 rounded-lg flex items-center justify-center ${item.color} group-hover:scale-110 transition-transform`}
+              >
+                <Icon name={item.icon} size={20} />
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
-                  {action?.title}
+                  {item.title}
                 </h3>
                 <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                  {action?.description}
+                  {item.description}
                 </p>
               </div>
             </div>
           </button>
         ))}
       </div>
-      {/* Recent Actions */}
+
+      {/* Ações Recentes */}
       <div className="mt-6 pt-4 border-t border-border">
         <h3 className="text-sm font-medium text-foreground mb-3">Ações Recentes</h3>
         <div className="space-y-2">
@@ -110,6 +123,7 @@ const QuickActionsPanel = ({ onActionClick }) => {
           </div>
         </div>
       </div>
+
       {/* Quick Stats */}
       <div className="mt-6 pt-4 border-t border-border">
         <div className="grid grid-cols-3 gap-4 text-center">
@@ -129,6 +143,6 @@ const QuickActionsPanel = ({ onActionClick }) => {
       </div>
     </div>
   );
-};
+}
 
-export default QuickActionsPanel;
+export default React.memo(QuickActionsPanel);
