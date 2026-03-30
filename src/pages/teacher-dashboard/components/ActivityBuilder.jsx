@@ -1,22 +1,10 @@
 // src/pages/teacher-dashboard/components/ActivityBuilder.jsx
-import React, { useEffect, useState } from 'react';
-import Icon from '../../../components/AppIcon';
-import Button from '../../../components/ui/Button';
-import Input from '../../../components/ui/Input';
-import Modal from '../../../components/ui/Modal';
+import React, { useEffect, useState } from "react";
+import Icon from "../../../components/AppIcon";
+import Button from "../../../components/ui/Button";
+import Input from "../../../components/ui/Input";
+import Modal from "../../../components/ui/Modal";
 
-/**
- * Construtor de Atividades
- *
- * Props:
- * - isOpen: boolean (controla exibição do modal)
- * - onClose: () => void
- * - onSave: (data) => void   // recebe os dados já "limpos"
- *
- * (Opcional):
- * - initialData: objeto para pré-preencher o formulário
- * - resetOnClose: boolean – se true, reseta o formulário ao fechar
- */
 export default function ActivityBuilder({
   isOpen,
   onClose,
@@ -25,49 +13,35 @@ export default function ActivityBuilder({
   resetOnClose = false,
 }) {
   const defaults = {
-    title: '',
-    description: '',
-    category: 'Matemática',
-    difficulty: 'Fácil',
-    duration: '30',
-    targetAge: '6-8 anos',
-    objectives: [''],
-    materials: [''],
-    instructions: [''],
-    adaptations: [''],
-    assessmentCriteria: [''],
+    title: "",
+    description: "",
+    category: "Matemática",
+    difficulty: "Fácil",
+    duration: "30",
+    targetAge: "6-8 anos",
+    objectives: [""],
+    materials: [""],
+    instructions: [""],
+    adaptations: [""],
+    assessmentCriteria: [""],
   };
 
   const [activityData, setActivityData] = useState(defaults);
 
-  // ✅ Só prepara/preenche dados quando o modal estiver ABERTO
+  // ✅ Só preenche/reset quando ABRE
   useEffect(() => {
     if (!isOpen) return;
 
-    if (initialData && typeof initialData === 'object') {
+    if (initialData && typeof initialData === "object") {
       setActivityData((prev) => ({
         ...prev,
         ...initialData,
-        objectives:
-          Array.isArray(initialData.objectives) && initialData.objectives.length
-            ? initialData.objectives
-            : [''],
-        materials:
-          Array.isArray(initialData.materials) && initialData.materials.length
-            ? initialData.materials
-            : [''],
-        instructions:
-          Array.isArray(initialData.instructions) && initialData.instructions.length
-            ? initialData.instructions
-            : [''],
-        adaptations:
-          Array.isArray(initialData.adaptations) && initialData.adaptations.length
-            ? initialData.adaptations
-            : [''],
+        objectives: Array.isArray(initialData.objectives) && initialData.objectives.length ? initialData.objectives : [""],
+        materials: Array.isArray(initialData.materials) && initialData.materials.length ? initialData.materials : [""],
+        instructions: Array.isArray(initialData.instructions) && initialData.instructions.length ? initialData.instructions : [""],
+        adaptations: Array.isArray(initialData.adaptations) && initialData.adaptations.length ? initialData.adaptations : [""],
         assessmentCriteria:
-          Array.isArray(initialData.assessmentCriteria) && initialData.assessmentCriteria.length
-            ? initialData.assessmentCriteria
-            : [''],
+          Array.isArray(initialData.assessmentCriteria) && initialData.assessmentCriteria.length ? initialData.assessmentCriteria : [""],
       }));
     } else {
       setActivityData(defaults);
@@ -75,15 +49,12 @@ export default function ActivityBuilder({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, initialData]);
 
-  const categories = ['Matemática', 'Português', 'Ciências', 'Arte', 'Educação Física', 'Socialização'];
-  const difficulties = ['Fácil', 'Médio', 'Difícil'];
-  const ageRanges = ['4-6 anos', '6-8 anos', '8-10 anos', '10-12 anos', '12+ anos'];
+  const categories = ["Matemática", "Português", "Ciências", "Arte", "Educação Física", "Socialização"];
+  const difficulties = ["Fácil", "Médio", "Difícil"];
+  const ageRanges = ["4-6 anos", "6-8 anos", "8-10 anos", "10-12 anos", "12+ anos"];
 
   function handleInputChange(field, value) {
-    setActivityData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setActivityData((prev) => ({ ...prev, [field]: value }));
   }
 
   function handleArrayChange(field, index, value) {
@@ -94,17 +65,11 @@ export default function ActivityBuilder({
   }
 
   function addArrayItem(field) {
-    setActivityData((prev) => ({
-      ...prev,
-      [field]: [...(prev[field] || []), ''],
-    }));
+    setActivityData((prev) => ({ ...prev, [field]: [...(prev[field] || []), ""] }));
   }
 
   function removeArrayItem(field, index) {
-    setActivityData((prev) => ({
-      ...prev,
-      [field]: (prev[field] || []).filter((_, i) => i !== index),
-    }));
+    setActivityData((prev) => ({ ...prev, [field]: (prev[field] || []).filter((_, i) => i !== index) }));
   }
 
   function handleClose() {
@@ -115,47 +80,43 @@ export default function ActivityBuilder({
   function handleSave(e) {
     e?.preventDefault();
 
-    // Validação mínima
     if (!activityData.title.trim() || !activityData.description.trim()) {
-      alert('Por favor, preencha o título e a descrição da atividade.');
+      alert("Por favor, preencha o título e a descrição da atividade.");
       return;
     }
 
-    // Limpeza de itens vazios nos arrays
     const cleanedData = {
       ...activityData,
       duration:
-        typeof activityData.duration === 'string' &&
-        activityData.duration.trim() !== '' &&
+        typeof activityData.duration === "string" &&
+        activityData.duration.trim() !== "" &&
         !Number.isNaN(Number(activityData.duration))
           ? Number(activityData.duration)
           : activityData.duration,
-      objectives: (activityData.objectives || []).filter((v) => String(v || '').trim()),
-      materials: (activityData.materials || []).filter((v) => String(v || '').trim()),
-      instructions: (activityData.instructions || []).filter((v) => String(v || '').trim()),
-      adaptations: (activityData.adaptations || []).filter((v) => String(v || '').trim()),
-      assessmentCriteria: (activityData.assessmentCriteria || []).filter((v) => String(v || '').trim()),
+      objectives: (activityData.objectives || []).filter((v) => String(v || "").trim()),
+      materials: (activityData.materials || []).filter((v) => String(v || "").trim()),
+      instructions: (activityData.instructions || []).filter((v) => String(v || "").trim()),
+      adaptations: (activityData.adaptations || []).filter((v) => String(v || "").trim()),
+      assessmentCriteria: (activityData.assessmentCriteria || []).filter((v) => String(v || "").trim()),
     };
 
     onSave?.(cleanedData);
-    handleClose(); // ✅ fecha ao salvar
+    handleClose();
   }
 
-  // ✅ NÃO monta nada quando fechado (isso evita efeitos de mount/re-render após login)
+  // ✅ NÃO renderiza nada fechado
   if (!isOpen) return null;
 
   return (
     <Modal open={isOpen} onClose={handleClose} title="Nova Atividade" size="lg">
-      <form onSubmit={handleSave} className="space-y-6 max-h-[70vh] overflow-y-auto pr-1">
-        {/* Informações básicas */}
+      <form onSubmit={handleSave} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input
             label="Título da Atividade"
-            name="title"
             type="text"
             placeholder="Ex: Leitura de Palavras Simples"
             value={activityData.title}
-            onChange={(e) => handleInputChange('title', e.target.value)}
+            onChange={(e) => handleInputChange("title", e.target.value)}
             required
           />
 
@@ -163,7 +124,7 @@ export default function ActivityBuilder({
             <label className="text-sm font-medium text-foreground">Categoria</label>
             <select
               value={activityData.category}
-              onChange={(e) => handleInputChange('category', e.target.value)}
+              onChange={(e) => handleInputChange("category", e.target.value)}
               className="w-full px-3 py-2 border border-border rounded-lg bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             >
               {categories.map((c) => (
@@ -175,10 +136,10 @@ export default function ActivityBuilder({
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Dificuldade</label>
+            <label className="text-sm font-medium text-foreground">Nível de Dificuldade</label>
             <select
               value={activityData.difficulty}
-              onChange={(e) => handleInputChange('difficulty', e.target.value)}
+              onChange={(e) => handleInputChange("difficulty", e.target.value)}
               className="w-full px-3 py-2 border border-border rounded-lg bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             >
               {difficulties.map((d) => (
@@ -189,11 +150,10 @@ export default function ActivityBuilder({
 
           <Input
             label="Duração (minutos)"
-            name="duration"
             type="number"
             placeholder="30"
             value={activityData.duration}
-            onChange={(e) => handleInputChange('duration', e.target.value)}
+            onChange={(e) => handleInputChange("duration", e.target.value)}
             min={1}
           />
 
@@ -201,7 +161,7 @@ export default function ActivityBuilder({
             <label className="text-sm font-medium text-foreground">Faixa Etária</label>
             <select
               value={activityData.targetAge}
-              onChange={(e) => handleInputChange('targetAge', e.target.value)}
+              onChange={(e) => handleInputChange("targetAge", e.target.value)}
               className="w-full px-3 py-2 border border-border rounded-lg bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             >
               {ageRanges.map((a) => (
@@ -215,7 +175,7 @@ export default function ActivityBuilder({
           <label className="text-sm font-medium text-foreground">Descrição</label>
           <textarea
             value={activityData.description}
-            onChange={(e) => handleInputChange('description', e.target.value)}
+            onChange={(e) => handleInputChange("description", e.target.value)}
             placeholder="Descreva brevemente a atividade..."
             rows={3}
             className="w-full mt-2 px-3 py-2 border border-border rounded-lg bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
@@ -223,13 +183,12 @@ export default function ActivityBuilder({
           />
         </div>
 
-        {/* Seções dinâmicas */}
         {[
-          { field: 'objectives', title: 'Objetivos de Aprendizagem', icon: 'Target' },
-          { field: 'materials', title: 'Materiais Necessários', icon: 'Package' },
-          { field: 'instructions', title: 'Instruções Passo a Passo', icon: 'List' },
-          { field: 'adaptations', title: 'Adaptações para Necessidades Especiais', icon: 'Heart' },
-          { field: 'assessmentCriteria', title: 'Critérios de Avaliação', icon: 'CheckCircle' },
+          { field: "objectives", title: "Objetivos de Aprendizagem", icon: "Target" },
+          { field: "materials", title: "Materiais Necessários", icon: "Package" },
+          { field: "instructions", title: "Instruções Passo a Passo", icon: "List" },
+          { field: "adaptations", title: "Adaptações para Necessidades Especiais", icon: "Heart" },
+          { field: "assessmentCriteria", title: "Critérios de Avaliação", icon: "CheckCircle" },
         ].map(({ field, title, icon }) => (
           <div key={field} className="space-y-3">
             <div className="flex items-center justify-between">
@@ -237,35 +196,23 @@ export default function ActivityBuilder({
                 <Icon name={icon} size={16} className="mr-2 text-primary" />
                 {title}
               </h3>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => addArrayItem(field)}
-                iconName="Plus"
-              >
+              <Button type="button" variant="outline" size="sm" onClick={() => addArrayItem(field)} iconName="Plus">
                 Adicionar
               </Button>
             </div>
 
             <div className="space-y-2">
-              {(activityData[field] || []).map((item, index) => (
-                <div key={index} className="flex items-center space-x-2">
+              {(activityData[field] || []).map((item, idx) => (
+                <div key={idx} className="flex items-center space-x-2">
                   <input
                     type="text"
                     value={item}
-                    onChange={(e) => handleArrayChange(field, index, e.target.value)}
-                    placeholder={`${title.toLowerCase()} ${index + 1}`}
+                    onChange={(e) => handleArrayChange(field, idx, e.target.value)}
+                    placeholder={`${title.toLowerCase()} ${idx + 1}`}
                     className="flex-1 px-3 py-2 border border-border rounded-lg bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   />
                   {(activityData[field]?.length || 0) > 1 && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeArrayItem(field, index)}
-                      aria-label="Remover item"
-                    >
+                    <Button type="button" variant="ghost" size="icon" onClick={() => removeArrayItem(field, idx)} aria-label="Remover item">
                       <Icon name="Trash2" size={16} className="text-destructive" />
                     </Button>
                   )}
@@ -275,17 +222,11 @@ export default function ActivityBuilder({
           </div>
         ))}
 
-        {/* Footer */}
         <div className="flex items-center justify-end gap-3 pt-2">
-          <Button type="button" variant="outline" onClick={handleClose}>
-            Cancelar
-          </Button>
-          <Button type="submit" variant="default">
-            Salvar Atividade
-          </Button>
+          <Button type="button" variant="outline" onClick={handleClose}>Cancelar</Button>
+          <Button type="submit" variant="default">Salvar Atividade</Button>
         </div>
       </form>
     </Modal>
   );
 }
-``

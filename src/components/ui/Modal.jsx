@@ -2,12 +2,6 @@
 import React, { useEffect } from "react";
 import Icon from "../AppIcon";
 
-/**
- * Modal controlado:
- * - Só renderiza quando open === true
- * - Fecha no overlay, no X e com tecla ESC
- * - Limita altura e faz scroll interno (não fica maior que a tela)
- */
 export default function Modal({
   open = false,
   onClose = () => {},
@@ -41,7 +35,7 @@ export default function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -51,17 +45,14 @@ export default function Modal({
         className={[
           "relative w-full",
           sizeClasses[size],
-          "mx-4 sm:mx-6 bg-card text-foreground rounded-2xl shadow-educational border border-border animate-scale-in",
-          "max-h-[90vh] overflow-hidden", // limita altura do container
+          "mx-4 sm:mx-6 bg-card text-foreground rounded-2xl shadow-educational border border-border",
+          "max-h-[90vh] overflow-hidden",
           className,
         ].join(" ")}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <h2 className="text-lg sm:text-xl font-semibold truncate text-foreground">
-            {title}
-          </h2>
+          <h2 className="text-lg sm:text-xl font-semibold truncate">{title}</h2>
           <button
             type="button"
             onClick={onClose}
@@ -72,7 +63,6 @@ export default function Modal({
           </button>
         </div>
 
-        {/* Body com scroll interno */}
         <div className="p-5 overflow-y-auto max-h-[calc(90vh-4rem)]">
           {children}
         </div>
@@ -80,3 +70,4 @@ export default function Modal({
     </div>
   );
 }
+``
