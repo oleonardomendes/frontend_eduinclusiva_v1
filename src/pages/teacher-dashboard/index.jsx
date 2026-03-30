@@ -1,5 +1,5 @@
 // src/pages/teacher-dashboard/index.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import MainNavigation from '../../components/ui/MainNavigation';
@@ -35,6 +35,29 @@ const TeacherDashboard = () => {
 
   // Plano gerado
   const [generatedPlan, setGeneratedPlan] = useState(null);
+
+  // ▼▼▼ Instrumentação/controle do ActivityBuilder ▼▼▼
+  const openSourceRef = useRef(null);
+  const reopenLockRef = useRef(false);
+
+  const openActivityBuilder = (source) => {
+    if (reopenLockRef.current) {
+      console.log('[ActivityBuilder] open blocked by lock (source:', source, ')');
+      return;
+    }
+    openSourceRef.current = source || 'desconhecido';
+    console.log('[ActivityBuilder] open by →', openSourceRef.current);
+    setIsActivityBuilderOpen(true);
+  };
+
+  const closeActivityBuilder = () => {
+    console.log('[ActivityBuilder] close by → user/UI');
+    setIsActivityBuilderOpen(false);
+    // trava reabertura imediata por 1,5s (evita “efeito elástico” enquanto depura)
+    reopenLockRef.current = true;
+    setTimeout(() => (reopenLockRef.current = false), 1500);
+  };
+  // ▲▲▲ FIM: Instrumentação/controle do ActivityBuilder ▲▲▲
 
   // =============================
   // Carregar usuário e alunos
@@ -110,7 +133,7 @@ const TeacherDashboard = () => {
   function handleQuickAction(action) {
     switch (action) {
       case 'createActivity':
-        setIsActivityBuilderOpen(true);
+        openActivityBuilder('QuickActionsPanel'); // 🔹 usa função controlada
         break;
       case 'generateAIPlan':
         if (students.length > 0) handleGenerateAIPlan(students[0]);
@@ -129,7 +152,6 @@ const TeacherDashboard = () => {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <Icon name="Loader2" size={32} className="animate-spin text-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Carregando dados...</p>
         </div>
       </div>
     );
@@ -238,7 +260,10 @@ const TeacherDashboard = () => {
                   ) : (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                       {students.map((student) => (
-                        <div key={student.id} className="relative border border-border rounded-lg p-4 bg-card shadow-educational">
+                        <div
+                          key={student.id}
+                          className="relative border border-border rounded-lg p-4 bg-card shadow-educational"
+                        >
                           {/* Info do aluno */}
                           <div className="mb-3">
                             <h3 className="font-semibold text-foreground text-base">{student.nome}</h3>
@@ -271,103 +296,3 @@ const TeacherDashboard = () => {
 
                             <input
                               type="file"
-                              accept="application/pdf"
-                              onChange={(e) => handleUploadActivityPDF(e.target.files?.[0], student.id)}
-                              className="text-xs"
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="w-full">
-                  <QuickActionsPanel onActionClick={handleQuickAction} />
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'planning' && (
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
-                <div className="xl:col-span-2">
-                  <TeachingPlanPanel teachingPlan={teachingPlan} />
-                </div>
-                <div className="w-full">
-                  <QuickActionsPanel onActionClick={handleQuickAction} />
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'activities' && (
-              <ActivityTemplateLibrary templates={[]} onSelectTemplate={() => {}} />
-            )}
-
-            {activeTab === 'calendar' && (
-              <CalendarView
-                events={calendarEvents}
-                onEventClick={() => {}}
-                onDateClick={() => {}}
-              />
-            )}
-          </div>
-        </div>
-      </main>
-
-      {/* Modal: cadastro de aluno (componente próprio) */}
-      {isStudentFormOpen && (
-        <StudentForm
-          onClose={() => setIsStudentFormOpen(false)}
-          onSuccess={(novoAluno) => {
-            setStudents((prev) => [...prev, novoAluno]);
-            setIsStudentFormOpen(false);
-          }}
-        />
-      )}
-
-      {/* Modal: Plano gerado pela IA (USANDO MODAL CONTROLADO) */}
-      <Modal
-        open={isPlanModalOpen && !!generatedPlan}
-        onClose={() => setIsPlanModalOpen(false)}
-        title={generatedPlan ? `Plano Gerado para ${generatedPlan.aluno.nome}` : 'Plano Gerado'}
-        size="md"
-      >
-        {generatedPlan && (
-          <div className="max-w-2xl mx-auto">
-            <p className="text-sm mb-2 text-muted-foreground">{generatedPlan.titulo}</p>
-
-            <div className="space-y-2">
-              {generatedPlan.atividades?.map((a, i) => (
-                <div key={i} className="p-2 border rounded bg-muted">
-                  <p className="font-medium">{a.tipo}</p>
-                  <p className="text-sm">{a.descricao}</p>
-                  <p className="text-xs text-muted-foreground">Duração: {a.duracao} min</p>
-                </div>
-              ))}
-            </div>
-
-            {!!generatedPlan.recomendacoes?.length && (
-              <div className="mt-4">
-                <h3 className="font-semibold text-foreground mb-1">Recomendações:</h3>
-                <ul className="list-disc list-inside text-sm text-muted-foreground">
-                  {generatedPlan.recomendacoes.map((r, i) => (
-                    <li key={i}>{r}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        )}
-      </Modal>
-
-      {/* Modal: Nova Atividade (ActivityBuilder deve usar Modal controlado internamente) */}
-      <ActivityBuilder
-        isOpen={isActivityBuilderOpen}
-        onClose={() => setIsActivityBuilderOpen(false)}
-        onSave={() => {}}
-      />
-    </div>
-  );
-};
-
-export default TeacherDashboard;
