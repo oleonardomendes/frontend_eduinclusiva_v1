@@ -1,9 +1,11 @@
+// src/pages/teacher-dashboard/components/ActivityBuilder.jsx
 import React, { useState } from 'react';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
+import Modal from '../../../components/ui/Modal';
 
-const ActivityBuilder = ({ isOpen, onClose, onSave }) => {
+export default function ActivityBuilder({ isOpen, onClose, onSave }) {
   const [activityData, setActivityData] = useState({
     title: '',
     description: '',
@@ -15,213 +17,222 @@ const ActivityBuilder = ({ isOpen, onClose, onSave }) => {
     materials: [''],
     instructions: [''],
     adaptations: [''],
-    assessmentCriteria: ['']
+    assessmentCriteria: [''],
   });
 
   const categories = ['Matemática', 'Português', 'Ciências', 'Arte', 'Educação Física', 'Socialização'];
   const difficulties = ['Fácil', 'Médio', 'Difícil'];
   const ageRanges = ['4-6 anos', '6-8 anos', '8-10 anos', '10-12 anos', '12+ anos'];
 
-  const handleInputChange = (field, value) => {
-    setActivityData(prev => ({
+  function handleInputChange(field, value) {
+    setActivityData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
-  };
+  }
 
-  const handleArrayChange = (field, index, value) => {
-    setActivityData(prev => ({
+  function handleArrayChange(field, index, value) {
+    setActivityData((prev) => ({
       ...prev,
-      [field]: prev?.[field]?.map((item, i) => i === index ? value : item)
+      [field]: prev?.[field]?.map((item, i) => (i === index ? value : item)),
     }));
-  };
+  }
 
-  const addArrayItem = (field) => {
-    setActivityData(prev => ({
+  function addArrayItem(field) {
+    setActivityData((prev) => ({
       ...prev,
-      [field]: [...prev?.[field], '']
+      [field]: [...(prev?.[field] || []), ''],
     }));
-  };
+  }
 
-  const removeArrayItem = (field, index) => {
-    setActivityData(prev => ({
+  function removeArrayItem(field, index) {
+    setActivityData((prev) => ({
       ...prev,
-      [field]: prev?.[field]?.filter((_, i) => i !== index)
+      [field]: (prev?.[field] || []).filter((_, i) => i !== index),
     }));
-  };
+  }
 
-  const handleSave = () => {
-    // Validate required fields
-    if (!activityData?.title || !activityData?.description) {
+  function handleClose() {
+    // Se quiser limpar ao fechar, descomente:
+    // setActivityData({ ...activityData, title: '', description: '' });
+    onClose?.();
+  }
+
+  function handleSave(e) {
+    e?.preventDefault();
+
+    // Validação mínima
+    if (!activityData?.title?.trim() || !activityData?.description?.trim()) {
       alert('Por favor, preencha o título e a descrição da atividade.');
       return;
     }
 
-    // Clean up empty array items
+    // Limpeza de itens vazios nos arrays
     const cleanedData = {
       ...activityData,
-      objectives: activityData?.objectives?.filter(obj => obj?.trim()),
-      materials: activityData?.materials?.filter(mat => mat?.trim()),
-      instructions: activityData?.instructions?.filter(inst => inst?.trim()),
-      adaptations: activityData?.adaptations?.filter(adapt => adapt?.trim()),
-      assessmentCriteria: activityData?.assessmentCriteria?.filter(crit => crit?.trim())
+      objectives: (activityData?.objectives || []).filter((v) => v?.trim()),
+      materials: (activityData?.materials || []).filter((v) => v?.trim()),
+      instructions: (activityData?.instructions || []).filter((v) => v?.trim()),
+      adaptations: (activityData?.adaptations || []).filter((v) => v?.trim()),
+      assessmentCriteria: (activityData?.assessmentCriteria || []).filter((v) => v?.trim()),
     };
 
-    onSave(cleanedData);
-    onClose();
-  };
-
-  if (!isOpen) return null;
+    // Retorna para o pai
+    onSave?.(cleanedData);
+    onClose?.(); // ✅ fecha ao salvar
+  }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-card border border-border rounded-lg shadow-educational-lg max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-border">
-          <h2 className="text-xl font-semibold text-foreground">Construtor de Atividades</h2>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <Icon name="X" size={20} />
-          </Button>
-        </div>
+    <Modal open={isOpen} onClose={handleClose} title="Nova Atividade" size="lg">
+      {/* Header adicional (opcional) — o título já está no Modal */}
+      {/* <div className="mb-2 text-sm text-muted-foreground">
+        Crie uma atividade personalizada para seus alunos
+      </div> */}
 
-        {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-          <div className="space-y-6">
-            {/* Basic Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input
-                label="Título da Atividade"
-                type="text"
-                placeholder="Digite o título da atividade"
-                value={activityData?.title}
-                onChange={(e) => handleInputChange('title', e?.target?.value)}
-                required
-              />
-              
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Categoria</label>
-                <select
-                  value={activityData?.category}
-                  onChange={(e) => handleInputChange('category', e?.target?.value)}
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-                  {categories?.map(category => (
-                    <option key={category} value={category}>{category}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
+      <form onSubmit={handleSave} className="space-y-6 max-h-[70vh] overflow-y-auto pr-1">
+        {/* Informações básicas */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Input
+            label="Título da Atividade"
+            type="text"
+            placeholder="Ex: Leitura de Palavras Simples"
+            value={activityData.title}
+            onChange={(e) => handleInputChange('title', e.target.value)}
+            required
+          />
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Dificuldade</label>
-                <select
-                  value={activityData?.difficulty}
-                  onChange={(e) => handleInputChange('difficulty', e?.target?.value)}
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-                  {difficulties?.map(difficulty => (
-                    <option key={difficulty} value={difficulty}>{difficulty}</option>
-                  ))}
-                </select>
-              </div>
-
-              <Input
-                label="Duração (minutos)"
-                type="number"
-                placeholder="30"
-                value={activityData?.duration}
-                onChange={(e) => handleInputChange('duration', e?.target?.value)}
-              />
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Faixa Etária</label>
-                <select
-                  value={activityData?.targetAge}
-                  onChange={(e) => handleInputChange('targetAge', e?.target?.value)}
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-                  {ageRanges?.map(age => (
-                    <option key={age} value={age}>{age}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-foreground">Descrição</label>
-              <textarea
-                value={activityData?.description}
-                onChange={(e) => handleInputChange('description', e?.target?.value)}
-                placeholder="Descreva a atividade e seus benefícios..."
-                rows={3}
-                className="w-full mt-2 px-3 py-2 border border-border rounded-lg bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
-                required
-              />
-            </div>
-
-            {/* Dynamic Sections */}
-            {[
-              { field: 'objectives', title: 'Objetivos de Aprendizagem', icon: 'Target' },
-              { field: 'materials', title: 'Materiais Necessários', icon: 'Package' },
-              { field: 'instructions', title: 'Instruções Passo a Passo', icon: 'List' },
-              { field: 'adaptations', title: 'Adaptações para Necessidades Especiais', icon: 'Heart' },
-              { field: 'assessmentCriteria', title: 'Critérios de Avaliação', icon: 'CheckCircle' }
-            ]?.map(({ field, title, icon }) => (
-              <div key={field} className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-medium text-foreground flex items-center">
-                    <Icon name={icon} size={16} className="mr-2 text-primary" />
-                    {title}
-                  </h3>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => addArrayItem(field)}
-                    iconName="Plus"
-                  >
-                    Adicionar
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  {activityData?.[field]?.map((item, index) => (
-                    <div key={index} className="flex items-center space-x-2">
-                      <input
-                        type="text"
-                        value={item}
-                        onChange={(e) => handleArrayChange(field, index, e?.target?.value)}
-                        placeholder={`${title?.toLowerCase()} ${index + 1}`}
-                        className="flex-1 px-3 py-2 border border-border rounded-lg bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                      />
-                      {activityData?.[field]?.length > 1 && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeArrayItem(field, index)}
-                        >
-                          <Icon name="Trash2" size={16} className="text-destructive" />
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">Categoria</label>
+            <select
+              value={activityData.category}
+              onChange={(e) => handleInputChange('category', e.target.value)}
+              className="w-full px-3 py-2 border border-border rounded-lg bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              {categories.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-end space-x-3 p-6 border-t border-border">
-          <Button variant="outline" onClick={onClose}>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">Dificuldade</label>
+            <select
+              value={activityData.difficulty}
+              onChange={(e) => handleInputChange('difficulty', e.target.value)}
+              className="w-full px-3 py-2 border border-border rounded-lg bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              {difficulties.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <Input
+            label="Duração (minutos)"
+            type="number"
+            placeholder="30"
+            value={activityData.duration}
+            onChange={(e) => handleInputChange('duration', e.target.value)}
+            min={1}
+          />
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">Faixa Etária</label>
+            <select
+              value={activityData.targetAge}
+              onChange={(e) => handleInputChange('targetAge', e.target.value)}
+              className="w-full px-3 py-2 border border-border rounded-lg bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              {ageRanges.map((a) => (
+                <option key={a} value={a}>
+                  {a}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label className="text-sm font-medium text-foreground">Descrição</label>
+          <textarea
+            value={activityData.description}
+            onChange={(e) => handleInputChange('description', e.target.value)}
+            placeholder="Descreva brevemente a atividade..."
+            rows={3}
+            className="w-full mt-2 px-3 py-2 border border-border rounded-lg bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+            required
+          />
+        </div>
+
+        {/* Seções dinâmicas */}
+        {[
+          { field: 'objectives', title: 'Objetivos de Aprendizagem', icon: 'Target' },
+          { field: 'materials', title: 'Materiais Necessários', icon: 'Package' },
+          { field: 'instructions', title: 'Instruções Passo a Passo', icon: 'List' },
+          { field: 'adaptations', title: 'Adaptações para Necessidades Especiais', icon: 'Heart' },
+          { field: 'assessmentCriteria', title: 'Critérios de Avaliação', icon: 'CheckCircle' },
+        ].map(({ field, title, icon }) => (
+          <div key={field} className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium text-foreground flex items-center">
+                <Icon name={icon} size={16} className="mr-2 text-primary" />
+                {title}
+              </h3>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => addArrayItem(field)}
+                iconName="Plus"
+              >
+                Adicionar
+              </Button>
+            </div>
+
+            <div className="space-y-2">
+              {(activityData?.[field] || []).map((item, index) => (
+                <div key={index} className="flex items-center space-x-2">
+                  <input
+                    type="text"
+                    value={item}
+                    onChange={(e) => handleArrayChange(field, index, e.target.value)}
+                    placeholder={`${title.toLowerCase()} ${index + 1}`}
+                    className="flex-1 px-3 py-2 border border-border rounded-lg bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                  {(activityData?.[field]?.length || 0) > 1 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeArrayItem(field, index)}
+                      aria-label="Remover item"
+                    >
+                      <Icon name="Trash2" size={16} className="text-destructive" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+
+        {/* Footer do formulário */}
+        <div className="flex items-center justify-end gap-3 pt-2">
+          <Button type="button" variant="outline" onClick={handleClose}>
             Cancelar
           </Button>
-          <Button variant="default" onClick={handleSave}>
+          <Button type="submit" variant="default">
             Salvar Atividade
           </Button>
         </div>
-      </div>
-    </div>
+      </form>
+    </Modal>
   );
-};
-
-export default ActivityBuilder;
+}
+``
