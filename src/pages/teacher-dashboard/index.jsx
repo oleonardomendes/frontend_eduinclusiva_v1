@@ -32,13 +32,11 @@ export default function TeacherDashboard() {
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const [isStudentFormOpen, setIsStudentFormOpen] = useState(false);
 
-  // plano
   const [generatedPlan, setGeneratedPlan] = useState(null);
 
-  // ✅ CADEADO ANTI AUTO-OPEN (o segredo do fix)
+  // ✅ CADEADO: só abre modal quando usuário clicou em algo
   const allowOpenRef = useRef(false);
 
-  // só libera abertura quando for ação real do usuário (clique)
   const allowOpen = () => { allowOpenRef.current = true; };
   const disallowOpen = () => { allowOpenRef.current = false; };
 
@@ -49,19 +47,19 @@ export default function TeacherDashboard() {
     }
     console.log("[ActivityBuilder] open by →", source);
     setIsActivityBuilderOpen(true);
+    // depois de abrir, fecha o cadeado novamente (evita auto re-open)
+    disallowOpen();
   };
 
   const closeActivityBuilder = () => {
     console.log("[ActivityBuilder] close by → user/UI");
     setIsActivityBuilderOpen(false);
-    disallowOpen(); // evita reabrir sem clique do usuário
+    disallowOpen();
   };
 
-  // =============================
-  // Autorização + carregar alunos
-  // =============================
   useEffect(() => {
-    // garante que o cadeado começa fechado
+    // importantíssimo: ao entrar na tela, garanta que começa fechado
+    setIsActivityBuilderOpen(false);
     disallowOpen();
 
     try {
@@ -89,9 +87,6 @@ export default function TeacherDashboard() {
     }
   }
 
-  // =============================
-  // IA: gerar plano
-  // =============================
   async function handleGenerateAIPlan(aluno) {
     try {
       const payload = {
@@ -113,9 +108,6 @@ export default function TeacherDashboard() {
     }
   }
 
-  // =============================
-  // Upload PDF
-  // =============================
   async function handleUploadActivityPDF(file, alunoId) {
     try {
       if (!file) return;
@@ -127,13 +119,10 @@ export default function TeacherDashboard() {
     }
   }
 
-  // =============================
-  // Quick Actions
-  // =============================
   function handleQuickAction(action) {
     switch (action) {
       case "createActivity":
-        allowOpen();                     // ✅ libera
+        allowOpen(); // ✅ libera somente no clique do usuário
         openActivityBuilder("QuickActionsPanel");
         break;
       case "generateAIPlan":
@@ -157,12 +146,7 @@ export default function TeacherDashboard() {
 
   const teachingPlan = {
     yearProgress: 68,
-    annualComparison: {
-      proposedProgress: 58,
-      currentProgress: 68,
-      comparison: 10,
-      isAhead: true,
-    },
+    annualComparison: { proposedProgress: 58, currentProgress: 68, comparison: 10, isAhead: true },
   };
 
   const calendarEvents = [
@@ -181,12 +165,10 @@ export default function TeacherDashboard() {
   return (
     <div className="min-h-screen bg-background">
       <MainNavigation />
-
       <main className="pt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <BreadcrumbNavigation />
 
-          {/* Header */}
           <div className="mb-8">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <div className="flex-1 min-w-0">
@@ -199,14 +181,9 @@ export default function TeacherDashboard() {
               </div>
 
               <div className="shrink-0 flex gap-2">
-                <Button
-                  variant="default"
-                  onClick={() => setIsStudentFormOpen(true)}
-                  iconName="UserPlus"
-                >
+                <Button variant="default" onClick={() => setIsStudentFormOpen(true)} iconName="UserPlus">
                   Novo Aluno
                 </Button>
-
                 <Button
                   variant="secondary"
                   onClick={() => students.length > 0 && handleGenerateAIPlan(students[0])}
@@ -220,7 +197,6 @@ export default function TeacherDashboard() {
             </div>
           </div>
 
-          {/* Tabs */}
           <div className="mb-8 border-b border-border">
             <nav className="flex space-x-4 sm:space-x-8 overflow-x-auto">
               {tabs.map((tab) => (
@@ -241,7 +217,6 @@ export default function TeacherDashboard() {
             </nav>
           </div>
 
-          {/* Conteúdo */}
           <div className="space-y-8">
             {activeTab === "students" && (
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
@@ -249,17 +224,11 @@ export default function TeacherDashboard() {
                   {students.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 border-2 border-dashed border-border rounded-lg bg-muted/20">
                       <Icon name="Users" size={48} className="text-muted-foreground mb-4 opacity-50" />
-                      <h3 className="text-lg font-medium text-foreground mb-2">
-                        Nenhum aluno cadastrado
-                      </h3>
+                      <h3 className="text-lg font-medium text-foreground mb-2">Nenhum aluno cadastrado</h3>
                       <p className="text-muted-foreground text-sm mb-4 text-center max-w-xs">
                         Cadastre seu primeiro aluno para começar a gerar atividades e planos com IA
                       </p>
-                      <Button
-                        variant="default"
-                        onClick={() => setIsStudentFormOpen(true)}
-                        iconName="UserPlus"
-                      >
+                      <Button variant="default" onClick={() => setIsStudentFormOpen(true)} iconName="UserPlus">
                         Cadastrar Primeiro Aluno
                       </Button>
                     </div>
@@ -269,31 +238,23 @@ export default function TeacherDashboard() {
                         <div key={student.id} className="relative border border-border rounded-lg p-4 bg-card shadow-educational">
                           <div className="mb-3">
                             <h3 className="font-semibold text-foreground text-base">{student.nome}</h3>
-                            {student.idade && (
-                              <p className="text-sm text-muted-foreground">{student.idade} anos</p>
-                            )}
+                            {student.idade && <p className="text-sm text-muted-foreground">{student.idade} anos</p>}
                             {student.necessidade && (
                               <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs">
                                 {student.necessidade}
                               </span>
                             )}
                             {student.observacoes && (
-                              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                                {student.observacoes}
-                              </p>
+                              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{student.observacoes}</p>
                             )}
                           </div>
 
                           <StudentCard student={student} />
 
                           <div className="flex justify-between items-center mt-3 gap-2">
-                            <Button
-                              variant="outline"
-                              onClick={() => handleGenerateAIPlan(student)}
-                            >
+                            <Button variant="outline" onClick={() => handleGenerateAIPlan(student)}>
                               Gerar Plano IA
                             </Button>
-
                             <input
                               type="file"
                               accept="application/pdf"
@@ -327,8 +288,7 @@ export default function TeacherDashboard() {
             {activeTab === "activities" && (
               <ActivityTemplateLibrary
                 templates={[]}
-                onSelectTemplate={(tpl) => {
-                  // ✅ só abre se houver clique do usuário
+                onSelectTemplate={() => {
                   allowOpen();
                   openActivityBuilder("ActivityTemplateLibrary");
                 }}
@@ -336,17 +296,12 @@ export default function TeacherDashboard() {
             )}
 
             {activeTab === "calendar" && (
-              <CalendarView
-                events={calendarEvents}
-                onEventClick={() => {}}
-                onDateClick={() => {}}
-              />
+              <CalendarView events={calendarEvents} onEventClick={() => {}} onDateClick={() => {}} />
             )}
           </div>
         </div>
       </main>
 
-      {/* Modal: cadastro de aluno */}
       {isStudentFormOpen && (
         <StudentForm
           onClose={() => setIsStudentFormOpen(false)}
@@ -357,7 +312,6 @@ export default function TeacherDashboard() {
         />
       )}
 
-      {/* Modal: Plano IA */}
       <Modal
         open={isPlanModalOpen && !!generatedPlan}
         onClose={() => setIsPlanModalOpen(false)}
@@ -372,7 +326,6 @@ export default function TeacherDashboard() {
                 <div key={i} className="p-2 border rounded bg-muted">
                   <p className="font-medium">{a.tipo}</p>
                   <p className="text-sm">{a.descricao}</p>
-                  <p className="text-xs text-muted-foreground">Duração: {a.duracao} min</p>
                 </div>
               ))}
             </div>
@@ -380,13 +333,10 @@ export default function TeacherDashboard() {
         )}
       </Modal>
 
-      {/* Modal: Nova Atividade */}
       <ActivityBuilder
         isOpen={isActivityBuilderOpen}
         onClose={closeActivityBuilder}
-        onSave={(payload) => {
-          console.log("[ActivityBuilder] onSave payload:", payload);
-        }}
+        onSave={(payload) => console.log("[ActivityBuilder] onSave payload:", payload)}
       />
     </div>
   );
