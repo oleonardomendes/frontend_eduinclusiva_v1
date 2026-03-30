@@ -10,9 +10,10 @@ export default function Modal({
   className = "",
   children,
 }) {
-  if (!open) return null;
-
+  // ✅ useEffect ANTES do return condicional (regra dos hooks do React)
   useEffect(() => {
+    if (!open) return;
+
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
@@ -25,7 +26,10 @@ export default function Modal({
       document.body.style.overflow = prev || "auto";
       document.removeEventListener("keydown", onKey);
     };
-  }, [onClose]);
+  }, [open, onClose]);
+
+  // ✅ return condicional DEPOIS dos hooks
+  if (!open) return null;
 
   const sizeClasses = {
     sm: "max-w-md",
@@ -70,4 +74,3 @@ export default function Modal({
     </div>
   );
 }
-``
