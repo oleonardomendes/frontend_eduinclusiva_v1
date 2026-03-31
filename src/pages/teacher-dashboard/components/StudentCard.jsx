@@ -1,6 +1,8 @@
+// src/pages/teacher-dashboard/components/StudentCard.jsx
 import React, { useState } from 'react';
 import Icon from '../../../components/AppIcon';
-import DialogForm from '../../../components/ui/DialogForm';
+import Modal from '../../../components/ui/Modal';
+import { api } from '../../../api/api';
 
 const StudentCard = ({ student }) => {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -10,10 +12,8 @@ const StudentCard = ({ student }) => {
   const fetchHistory = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`http://localhost:8000/v1/ai/historico/${student.id}`);
-      if (!res.ok) throw new Error('Erro ao buscar histórico');
-      const data = await res.json();
-      setHistory(data);
+      const { data } = await api.get(`/ai/historico/${student.id}`);
+      setHistory(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
       setHistory([]);
@@ -28,34 +28,41 @@ const StudentCard = ({ student }) => {
   };
 
   return (
-    <div className="bg-card border border-border rounded-lg shadow-educational p-4 sm:p-6 flex flex-col justify-between">
+    <div className="flex flex-col justify-between">
       <div className="flex items-center space-x-4">
-        <img
-          src={student.avatar}
-          alt={student.avatarAlt}
-          className="w-16 h-16 rounded-full object-cover border border-border"
-        />
+        {student.avatar && (
+          <img
+            src={student.avatar}
+            alt={student.avatarAlt || student.nome}
+            className="w-16 h-16 rounded-full object-cover border border-border"
+          />
+        )}
         <div>
-          <h3 className="font-semibold text-lg text-foreground">{student.name}</h3>
-          <p className="text-sm text-muted-foreground">{student.grade}</p>
-          <p className="text-xs text-muted-foreground">
-            Última atualização: {student.lastUpdate}
-          </p>
+          <h3 className="font-semibold text-lg text-foreground">{student.nome || student.name}</h3>
+          {student.grade && <p className="text-sm text-muted-foreground">{student.grade}</p>}
+          {student.lastUpdate && (
+            <p className="text-xs text-muted-foreground">
+              Última atualização: {student.lastUpdate}
+            </p>
+          )}
         </div>
       </div>
 
-      <div className="mt-4">
-        <p className="text-sm text-muted-foreground mb-2">Progresso: {student.progress}%</p>
-        <div className="w-full bg-muted h-2 rounded-full">
-          <div
-            className="bg-primary h-2 rounded-full"
-            style={{ width: `${student.progress}%` }}
-          ></div>
+      {student.progress !== undefined && (
+        <div className="mt-4">
+          <p className="text-sm text-muted-foreground mb-2">Progresso: {student.progress}%</p>
+          <div className="w-full bg-muted h-2 rounded-full">
+            <div
+              className="bg-primary h-2 rounded-full"
+              style={{ width: `${student.progress}%` }}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="flex justify-between items-center mt-4">
         <button
+          type="button"
           onClick={handleOpenHistory}
           className="text-sm text-primary hover:underline"
         >
@@ -63,22 +70,25 @@ const StudentCard = ({ student }) => {
         </button>
 
         <Icon
-          name={student.specialNeeds ? 'Heart' : 'User'}
+          name={student.specialNeeds || student.necessidade ? 'Heart' : 'User'}
           className="text-secondary"
           size={18}
         />
       </div>
 
-      {/* Modal de Histórico */}
-      <DialogForm
-        isOpen={isHistoryOpen}
+      {/* ✅ Modal correto para histórico */}
+      <Modal
+        open={isHistoryOpen}
         onClose={() => setIsHistoryOpen(false)}
-        title={`Histórico de planos - ${student.name}`}
+        title={`Histórico de planos — ${student.nome || student.name}`}
+        size="md"
       >
         {loading ? (
-          <div className="text-center text-muted-foreground py-4">Carregando histórico...</div>
+          <div className="text-center text-muted-foreground py-4">
+            Carregando histórico...
+          </div>
         ) : history.length > 0 ? (
-          <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+          <div className="space-y-4">
             {history.map((plano, index) => (
               <div key={index} className="bg-muted/30 p-4 rounded-lg border border-border">
                 <h4 className="font-semibold text-foreground text-base">
@@ -88,26 +98,24 @@ const StudentCard = ({ student }) => {
                   Gerado em: {new Date(plano.criado_em).toLocaleString('pt-BR')}
                 </p>
 
-                <div className="mt-2">
-                  <h5 className="font-medium text-sm text-primary">Atividades:</h5>
-                  <ul className="list-disc list-inside text-sm text-muted-foreground">
-                    {Array.isArray(plano.atividades) ? (
-                      plano.atividades.map((a, i) => (
+                {Array.isArray(plano.atividades) && plano.atividades.length > 0 && (
+                  <div className="mt-2">
+                    <h5 className="font-medium text-sm text-primary mb-1">Atividades:</h5>
+                    <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+                      {plano.atividades.map((a, i) => (
                         <li key={i}>
                           <span className="font-medium">{a.tipo || 'Atividade'}:</span>{' '}
                           {a.descricao || ''}
                         </li>
-                      ))
-                    ) : (
-                      <li>Atividades indisponíveis</li>
-                    )}
-                  </ul>
-                </div>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
                 {Array.isArray(plano.recomendacoes) && plano.recomendacoes.length > 0 && (
                   <div className="mt-2">
-                    <h5 className="font-medium text-sm text-accent">Recomendações:</h5>
-                    <ul className="list-disc list-inside text-sm text-muted-foreground">
+                    <h5 className="font-medium text-sm text-accent mb-1">Recomendações:</h5>
+                    <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
                       {plano.recomendacoes.map((r, i) => (
                         <li key={i}>{r}</li>
                       ))}
@@ -122,7 +130,7 @@ const StudentCard = ({ student }) => {
             Nenhum plano gerado ainda para este aluno.
           </div>
         )}
-      </DialogForm>
+      </Modal>
     </div>
   );
 };
