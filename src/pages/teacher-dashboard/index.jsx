@@ -237,7 +237,12 @@ export default function TeacherDashboard() {
                       {students.map((student) => (
                         <div key={student.id} className="relative border border-border rounded-lg p-4 bg-card shadow-educational">
                           <div className="mb-3">
-                            <h3 className="font-semibold text-foreground text-base">{student.nome}</h3>
+                            <h3
+                              className="font-semibold text-foreground text-base cursor-pointer hover:text-primary transition-colors"
+                              onClick={() => navigate(`/student-profile/${student.id}`)}
+                            >
+                              {student.nome}
+                            </h3>
                             {student.idade && <p className="text-sm text-muted-foreground">{student.idade} anos</p>}
                             {student.necessidade && (
                               <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs">
@@ -251,7 +256,16 @@ export default function TeacherDashboard() {
 
                           <StudentCard student={student} />
 
-                          <div className="flex justify-between items-center mt-3 gap-2">
+                          <div className="flex flex-wrap justify-between items-center mt-3 gap-2">
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => navigate(`/student-profile/${student.id}`)}
+                              iconName="User"
+                              iconPosition="left"
+                            >
+                              Ver Perfil
+                            </Button>
                             <Button variant="outline" onClick={() => handleGenerateAIPlan(student)}>
                               Gerar Plano IA
                             </Button>

@@ -69,8 +69,18 @@ export async function getAlunos() {
   return data;
 }
 
+export async function getAluno(id) {
+  const { data } = await api.get(`/alunos/${id}`);
+  return data;
+}
+
 export async function createAluno(aluno) {
   const { data } = await api.post("/alunos", aluno);
+  return data;
+}
+
+export async function getPlanos(alunoId) {
+  const { data } = await api.get(`/planos/${alunoId}`);
   return data;
 }
 

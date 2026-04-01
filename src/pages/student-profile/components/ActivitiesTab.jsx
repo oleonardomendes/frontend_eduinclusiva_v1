@@ -4,85 +4,34 @@ import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import Select from '../../../components/ui/Select';
 
-const ActivitiesTab = ({ student, currentUser }) => {
+const ActivitiesTab = ({ student, currentUser, planos }) => {
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateActivity, setShowCreateActivity] = useState(false);
 
   const canCreateActivity = currentUser?.role === 'teacher' || currentUser?.role === 'coordinator';
 
-  const activities = [
-    {
-      id: 1,
-      title: 'Reconhecimento de Números 1-50',
-      subject: 'Matemática',
-      type: 'Exercício Interativo',
-      difficulty: 'Básico',
-      status: 'completed',
-      score: 85,
-      completedDate: '2024-10-22',
-      duration: '25 min',
-      description: 'Atividade focada no reconhecimento e sequenciamento de números de 1 a 50.',
-      teacher: 'Prof. Ana Silva',
-      feedback: 'Excelente progresso! Conseguiu identificar todos os números com apenas 2 erros.'
-    },
-    {
-      id: 2,
-      title: 'Leitura de Palavras Simples',
-      subject: 'Português',
-      type: 'Leitura Guiada',
-      difficulty: 'Básico',
-      status: 'completed',
-      score: 78,
-      completedDate: '2024-10-20',
-      duration: '30 min',
-      description: 'Leitura de palavras de 3 a 5 letras com apoio visual.',
-      teacher: 'Prof. Ana Silva',
-      feedback: 'Boa evolução na fluência. Precisa trabalhar mais as sílabas complexas.'
-    },
-    {
-      id: 3,
-      title: 'Pintura com Aquarela - Paisagem',
-      subject: 'Artes',
-      type: 'Atividade Criativa',
-      difficulty: 'Intermediário',
-      status: 'completed',
-      score: 92,
-      completedDate: '2024-10-18',
-      duration: '45 min',
-      description: 'Criação de paisagem usando técnicas básicas de aquarela.',
-      teacher: 'Prof. Carlos Santos',
-      feedback: 'Criatividade excepcional! Demonstrou controle motor fino muito bom.'
-    },
-    {
-      id: 4,
-      title: 'Coordenação Motora - Circuito',
-      subject: 'Educação Física',
-      type: 'Atividade Física',
-      difficulty: 'Básico',
-      status: 'in_progress',
-      score: null,
-      assignedDate: '2024-10-23',
-      duration: '40 min',
-      description: 'Circuito adaptado para desenvolvimento da coordenação motora grossa.',
-      teacher: 'Prof. Maria Oliveira',
-      feedback: null
-    },
-    {
-      id: 5,
-      title: 'Ciências - Partes do Corpo Humano',
-      subject: 'Ciências',
-      type: 'Exploração Sensorial',
-      difficulty: 'Básico',
-      status: 'assigned',
-      score: null,
-      assignedDate: '2024-10-25',
-      duration: '35 min',
-      description: 'Identificação das principais partes do corpo através de jogos e músicas.',
-      teacher: 'Prof. Ana Silva',
-      feedback: null
-    }
-  ];
+  const activities = Array.isArray(planos) && planos.length > 0
+    ? planos.map((plano, i) => ({
+        id: plano.id ?? i,
+        title: plano.titulo || `Plano de IA ${i + 1}`,
+        subject: plano.materia || 'Geral',
+        type: 'Plano Adaptado IA',
+        difficulty: 'Adaptado',
+        status: 'completed',
+        score: null,
+        completedDate: plano.criado_em
+          ? new Date(plano.criado_em).toLocaleDateString('pt-BR')
+          : null,
+        duration: '—',
+        description: plano.conteudo || plano.descricao_aluno || '',
+        teacher: '',
+        feedback:
+          Array.isArray(plano.atividades) && plano.atividades.length > 0
+            ? plano.atividades.map((a) => `${a.tipo}: ${a.descricao}`).join(' | ')
+            : null,
+      }))
+    : [];
 
   const filterOptions = [
     { value: 'all', label: 'Todas as Atividades' },

@@ -3,7 +3,7 @@ import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-const ProgressTab = ({ student, currentUser }) => {
+const ProgressTab = ({ student, currentUser, historico }) => {
   const [selectedPeriod, setSelectedPeriod] = useState('semester');
   const [selectedSubject, setSelectedSubject] = useState('all');
 
@@ -26,40 +26,21 @@ const ProgressTab = ({ student, currentUser }) => {
     { skill: 'Concentração', progress: 70, color: 'bg-warning' }
   ];
 
-  const recentActivities = [
-    {
-      id: 1,
-      date: '2024-10-22',
-      activity: 'Atividade de Matemática - Números até 100',
-      score: 85,
-      teacher: 'Prof. Ana Silva',
-      notes: 'Excelente progresso na identificação de números. Demonstrou maior confiança ao resolver os exercícios.'
-    },
-    {
-      id: 2,
-      date: '2024-10-20',
-      activity: 'Leitura Compartilhada - História Infantil',
-      score: 78,
-      teacher: 'Prof. Ana Silva',
-      notes: 'Participou ativamente da leitura. Conseguiu identificar personagens principais da história.'
-    },
-    {
-      id: 3,
-      date: '2024-10-18',
-      activity: 'Atividade de Artes - Pintura com Aquarela',
-      score: 92,
-      teacher: 'Prof. Carlos Santos',
-      notes: 'Demonstrou criatividade excepcional. Trabalhou de forma independente durante toda a atividade.'
-    },
-    {
-      id: 4,
-      date: '2024-10-15',
-      activity: 'Educação Física Adaptada - Coordenação',
-      score: 70,
-      teacher: 'Prof. Maria Oliveira',
-      notes: 'Melhorou o equilíbrio e coordenação. Precisa de mais prática com movimentos bilaterais.'
-    }
-  ];
+  const recentActivities = Array.isArray(historico) && historico.length > 0
+    ? historico.map((item, i) => ({
+        id: item.id ?? i,
+        date: item.criado_em
+          ? new Date(item.criado_em).toLocaleDateString('pt-BR')
+          : '',
+        activity: item.titulo || `Plano de IA #${i + 1}`,
+        score: null,
+        teacher: '',
+        notes:
+          Array.isArray(item.atividades) && item.atividades.length > 0
+            ? item.atividades.map((a) => `${a.tipo}: ${a.descricao}`).join(' | ')
+            : item.conteudo || '',
+      }))
+    : [];
 
   const milestones = [
     {
@@ -218,8 +199,11 @@ const ProgressTab = ({ student, currentUser }) => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Activities */}
         <div className="bg-card border border-border rounded-lg p-6">
-          <h4 className="text-md font-medium text-foreground mb-4">Atividades Recentes</h4>
+          <h4 className="text-md font-medium text-foreground mb-4">Histórico de Planos IA</h4>
           <div className="space-y-4">
+            {recentActivities.length === 0 && (
+              <p className="text-sm text-muted-foreground">Nenhum plano gerado ainda.</p>
+            )}
             {recentActivities?.map((activity) => (
               <div key={activity?.id} className="p-4 bg-muted/50 rounded-lg border border-border">
                 <div className="flex items-start justify-between mb-2">
@@ -283,7 +267,9 @@ const ProgressTab = ({ student, currentUser }) => {
             <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
               <div>
                 <p className="text-muted-foreground">Progresso Geral</p>
-                <p className="font-semibold text-primary text-lg">{student?.overallProgress}%</p>
+                <p className="font-semibold text-primary text-lg">
+                  {student?.overallProgress != null ? `${student.overallProgress}%` : '—'}
+                </p>
               </div>
               <div>
                 <p className="text-muted-foreground">Atividades Concluídas</p>

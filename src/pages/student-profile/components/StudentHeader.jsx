@@ -55,7 +55,11 @@ const StudentHeader = ({ student, currentUser, onEditProfile, onUploadPhoto }) =
                 <div className="flex items-center space-x-2">
                   <Icon name="Calendar" size={16} className="text-muted-foreground" />
                   <span className="text-foreground">
-                    {getAgeFromBirthDate(student?.birthDate)} anos
+                    {student?.birthDate
+                      ? `${getAgeFromBirthDate(student?.birthDate)} anos`
+                      : student?.age
+                      ? `${student.age} anos`
+                      : '—'}
                   </span>
                 </div>
                 <div className="flex items-center space-x-2">
