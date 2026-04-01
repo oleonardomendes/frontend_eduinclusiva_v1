@@ -16,14 +16,17 @@ import Button from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
 import StudentForm from "../../components/ui/StudentForm";
 
-import { getAlunos, gerarPlanoAdaptado } from "../../api/api";
+import { getAlunos, gerarPlanoAdaptado, getMetas, getAvaliacoesResumo, createMeta } from "../../api/api";
 
 export default function TeacherDashboard() {
   const navigate = useNavigate();
 
   const [currentUser, setCurrentUser] = useState(null);
   const [students, setStudents] = useState([]);
+  const [metas, setMetas] = useState([]);
+  const [avaliacoesResumo, setAvaliacoesResumo] = useState([]);
   const [loading, setLoading] = useState(true);
+  const anoAtual = new Date().getFullYear();
 
   const [activeTab, setActiveTab] = useState("students");
 
@@ -78,10 +81,23 @@ export default function TeacherDashboard() {
 
   async function fetchAlunos() {
     try {
-      const data = await getAlunos();
-      setStudents(Array.isArray(data) ? data : []);
+      const [alunosResult, metasResult, resumoResult] = await Promise.allSettled([
+        getAlunos(),
+        getMetas(anoAtual),
+        getAvaliacoesResumo(anoAtual),
+      ]);
+
+      if (alunosResult.status === "fulfilled") {
+        setStudents(Array.isArray(alunosResult.value) ? alunosResult.value : []);
+      }
+      if (metasResult.status === "fulfilled") {
+        setMetas(Array.isArray(metasResult.value) ? metasResult.value : []);
+      }
+      if (resumoResult.status === "fulfilled") {
+        setAvaliacoesResumo(resumoResult.value ?? []);
+      }
     } catch (error) {
-      console.error("Erro ao carregar alunos:", error);
+      console.error("Erro ao carregar dados:", error);
     } finally {
       setLoading(false);
     }
@@ -133,10 +149,6 @@ function handleQuickAction(action) {
     );
   }
 
-  const teachingPlan = {
-    yearProgress: 68,
-    annualComparison: { proposedProgress: 58, currentProgress: 68, comparison: 10, isAhead: true },
-  };
 
   const calendarEvents = [
     { id: 1, title: "Aula de Matemática - Turma A", date: "2024-10-23", type: "aula" },
@@ -280,7 +292,22 @@ function handleQuickAction(action) {
             {activeTab === "planning" && (
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
                 <div className="xl:col-span-2">
-                  <TeachingPlanPanel teachingPlan={teachingPlan} />
+                  <TeachingPlanPanel
+                    metas={metas}
+                    avaliacoesResumo={avaliacoesResumo}
+                    anoAtual={anoAtual}
+                    salaDefault={students[0]?.sala || ""}
+                    onMetaCreated={async (payload) => {
+                      try {
+                        await createMeta(payload);
+                        const updated = await getMetas(anoAtual);
+                        setMetas(Array.isArray(updated) ? updated : []);
+                      } catch (err) {
+                        console.error("Erro ao criar meta:", err);
+                        alert("Erro ao salvar meta.");
+                      }
+                    }}
+                  />
                 </div>
                 <div className="w-full">
                   <QuickActionsPanel onActionClick={handleQuickAction} />

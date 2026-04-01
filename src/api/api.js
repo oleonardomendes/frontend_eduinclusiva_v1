@@ -89,6 +89,39 @@ export async function getPlanos(alunoId) {
   return data;
 }
 
+// ========== METAS ==========
+export async function getMetas(ano) {
+  const { data } = await api.get(`/metas/?ano=${ano}`);
+  return data;
+}
+
+export async function createMeta(payload) {
+  const { data } = await api.post("/metas/", payload);
+  return data;
+}
+
+export async function updateMeta(id, payload) {
+  const { data } = await api.put(`/metas/${id}`, payload);
+  return data;
+}
+
+// ========== AVALIAÇÕES ==========
+export async function getAvaliacoesResumo(ano) {
+  const { data } = await api.get(`/avaliacoes/resumo/?ano=${ano}`);
+  return data;
+}
+
+export async function createAvaliacao(payload) {
+  const { data } = await api.post("/avaliacoes/", payload);
+  return data;
+}
+
+export async function getAvaliacoes(params = {}) {
+  const query = new URLSearchParams(params).toString();
+  const { data } = await api.get(`/avaliacoes/${query ? `?${query}` : ''}`);
+  return data;
+}
+
 // ========== IA / PLANOS ==========
 export async function gerarPlanoAdaptado(payload) {
   // payload: { aluno_id, descricao_aluno, conteudo, materia, competencia }
