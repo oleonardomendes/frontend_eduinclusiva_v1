@@ -16,7 +16,7 @@ import Button from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
 import StudentForm from "../../components/ui/StudentForm";
 
-import { getAlunos, gerarPlanoAdaptado, uploadPDF } from "../../api/api";
+import { getAlunos, gerarPlanoAdaptado } from "../../api/api";
 
 export default function TeacherDashboard() {
   const navigate = useNavigate();
@@ -108,18 +108,7 @@ export default function TeacherDashboard() {
     }
   }
 
-  async function handleUploadActivityPDF(file, alunoId) {
-    try {
-      if (!file) return;
-      await uploadPDF(file, alunoId);
-      alert("Atividade enviada e indexada com sucesso!");
-    } catch (err) {
-      console.error("Erro no upload do PDF:", err);
-      alert("Falha ao enviar arquivo.");
-    }
-  }
-
-  function handleQuickAction(action) {
+function handleQuickAction(action) {
     switch (action) {
       case "createActivity":
         allowOpen(); // ✅ libera somente no clique do usuário
@@ -256,7 +245,7 @@ export default function TeacherDashboard() {
 
                           <StudentCard student={student} />
 
-                          <div className="flex flex-wrap justify-between items-center mt-3 gap-2">
+                          <div className="flex items-center gap-2 mt-3">
                             <Button
                               variant="secondary"
                               size="sm"
@@ -266,15 +255,15 @@ export default function TeacherDashboard() {
                             >
                               Ver Perfil
                             </Button>
-                            <Button variant="outline" onClick={() => handleGenerateAIPlan(student)}>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleGenerateAIPlan(student)}
+                              iconName="Sparkles"
+                              iconPosition="left"
+                            >
                               Gerar Plano IA
                             </Button>
-                            <input
-                              type="file"
-                              accept="application/pdf"
-                              onChange={(e) => handleUploadActivityPDF(e.target.files?.[0], student.id)}
-                              className="text-xs"
-                            />
                           </div>
                         </div>
                       ))}
