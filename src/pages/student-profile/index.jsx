@@ -10,7 +10,7 @@ import ActivitiesTab from './components/ActivitiesTab';
 import CommunicationTab from './components/CommunicationTab';
 import Icon from '../../components/AppIcon';
 import Button from '../../components/ui/Button';
-import { getAluno, getPlanos, getHistoricoPlanos } from '../../api/api';
+import { getAluno, getAlunoMetricas, getPlanos, getHistoricoPlanos } from '../../api/api';
 
 const StudentProfile = () => {
   const [currentUser, setCurrentUser] = useState(null);
@@ -18,6 +18,7 @@ const StudentProfile = () => {
   const [student, setStudent] = useState(null);
   const [planos, setPlanos] = useState([]);
   const [historico, setHistorico] = useState([]);
+  const [metricas, setMetricas] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isNavCollapsed, setIsNavCollapsed] = useState(false);
   const navigate = useNavigate();
@@ -38,35 +39,38 @@ const StudentProfile = () => {
 
     async function loadStudent() {
       try {
-        const [alunoResult, planosResult, historicoResult] = await Promise.allSettled([
+        const [alunoResult, metricasResult, planosResult, historicoResult] = await Promise.allSettled([
           getAluno(studentId),
+          getAlunoMetricas(studentId),
           getPlanos(studentId),
           getHistoricoPlanos(studentId),
         ]);
+
+        const m = metricasResult.status === 'fulfilled' ? metricasResult.value : null;
 
         if (alunoResult.status === 'fulfilled') {
           const a = alunoResult.value;
           setStudent({
             id: a.id,
             name: a.nome,
-            registrationNumber: a.matricula || '', // TODO: backend field
-            photo: a.foto || null, // TODO: backend field
+            registrationNumber: a.matricula || '',
+            photo: a.foto || null,
             photoAlt: `Foto de perfil de ${a.nome}`,
-            birthDate: a.data_nascimento || null, // TODO: backend field
-            gender: a.genero || null, // TODO: backend field
+            birthDate: a.data_nascimento || null,
+            gender: a.genero || null,
             age: a.idade,
             grade: a.sala || '',
-            class: '', // TODO: extrair de sala ou campo separado
+            class: '', // TODO: sem campo separado no backend — sala contém a turma
             school: a.escola || '',
-            teacher: '', // TODO: buscar nome pelo professor_id
-            schedule: '', // TODO: backend field
+            teacher: a.professor_nome || '',
+            schedule: a.horario_aulas || '',
             specialNeeds: a.necessidade ? [a.necessidade] : [],
             accommodations: a.observacoes || '',
-            learningObjectives: '', // TODO: backend field
-            currentLevel: '', // TODO: backend field
-            overallProgress: null, // TODO: backend field
-            lastAssessment: '', // TODO: backend field
-            address: '', // TODO: backend field
+            learningObjectives: a.objetivos_aprendizado || '',
+            currentLevel: m?.nivel_aprendizado || a.nivel_aprendizado || '',
+            overallProgress: m?.progresso_geral ?? a.progresso_geral ?? null,
+            lastAssessment: '', // TODO: sem endpoint de avaliações ainda
+            address: a.endereco || '',
             phone: a.telefone_contato || '',
             emergencyContact: {
               name: a.contato_emergencia_nome || '',
@@ -74,9 +78,13 @@ const StudentProfile = () => {
               relationship: a.contato_emergencia_parentesco || '',
             },
             medicalInfo: a.informacoes_medicas || '',
-            allergies: '', // TODO: backend field
-            medications: '', // TODO: backend field
+            allergies: a.alergias || '',
+            medications: a.medicamentos || '',
           });
+        }
+
+        if (m) {
+          setMetricas(m);
         }
 
         if (planosResult.status === 'fulfilled') {
@@ -236,6 +244,7 @@ const StudentProfile = () => {
                   onUpdateAcademicInfo={handleUpdateAcademicInfo}
                   planos={planos}
                   historico={historico}
+                  metricas={metricas}
                 />
               )}
             </div>

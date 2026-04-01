@@ -1,4 +1,5 @@
 # CLAUDE.md — Frontend EduInclusiva
+> Última atualização: Abril 2026
 
 ## Visão Geral
 Frontend da plataforma EduInclusiva — sistema de gestão educacional inclusiva para alunos com necessidades educacionais especiais (NEE), aprovado pela Prefeitura Municipal de São Paulo.
@@ -19,18 +20,18 @@ Frontend da plataforma EduInclusiva — sistema de gestão educacional inclusiva
 ```
 src/
 ├── api/
-│   ├── api.js              ← instância Axios centralizada + interceptors JWT
-│   └── auth.js             ← funções login(), logout()
+│   ├── api.js              ← instância Axios + interceptors JWT + funções de API
+│   └── auth.js             ← login(), logout()
 ├── components/
-│   ├── AppIcon.jsx          ← wrapper do lucide-react
+│   ├── AppIcon.jsx         ← wrapper lucide-react
 │   └── ui/
 │       ├── Button.jsx
 │       ├── Input.jsx
 │       ├── Select.jsx
-│       ├── Modal.jsx        ← modal genérico (prop: open, onClose, title, size)
+│       ├── Modal.jsx        ← modal genérico (props: open, onClose, title, size)
 │       ├── MainNavigation.jsx
 │       ├── BreadcrumbNavigation.jsx
-│       ├── DialogForm.jsx   ← formulário de criação de atividade
+│       ├── DialogForm.jsx   ← formulário de criação de atividade (NÃO usar como modal)
 │       └── StudentForm.jsx  ← formulário de cadastro de aluno (conectado ao backend)
 ├── hooks/
 │   └── useAuth.js           ← hook centralizado de autenticação por role
@@ -39,25 +40,25 @@ src/
 │   │   ├── index.jsx
 │   │   └── components/
 │   │       ├── LoginHeader.jsx
-│   │       └── LoginForm.jsx   ← faz login real na API, salva token + currentUser
+│   │       └── LoginForm.jsx   ← login real na API, salva token + currentUser
 │   ├── teacher-dashboard/
-│   │   ├── index.jsx           ← dashboard principal do professor
+│   │   ├── index.jsx           ← ✅ conectado ao backend
 │   │   └── components/
-│   │       ├── StudentCard.jsx       ← card do aluno (usa Modal para histórico)
-│   │       ├── TeachingPlanPanel.jsx
+│   │       ├── StudentCard.jsx       ← usa Modal para histórico de planos
+│   │       ├── TeachingPlanPanel.jsx ← dados mockados (TODO)
 │   │       ├── ActivityTemplateLibrary.jsx
 │   │       ├── QuickActionsPanel.jsx
-│   │       ├── CalendarView.jsx
-│   │       └── ActivityBuilder.jsx   ← modal de criação de atividade detalhada
+│   │       ├── CalendarView.jsx      ← dados mockados (TODO)
+│   │       └── ActivityBuilder.jsx   ← modal de criação de atividade
 │   ├── coordinator-dashboard/
-│   │   ├── index.jsx           ← dashboard do coordenador (dados mockados)
+│   │   ├── index.jsx           ← ❌ 100% mockado
 │   │   └── components/
 │   │       ├── SchoolMetrics.jsx
 │   │       ├── FilterControls.jsx
 │   │       ├── CalendarWidget.jsx
 │   │       └── AnnouncementPanel.jsx
 │   ├── secretary-dashboard/
-│   │   ├── index.jsx           ← dashboard da secretária (dados mockados)
+│   │   ├── index.jsx           ← ❌ 100% mockado
 │   │   └── components/
 │   │       ├── NetworkOverview.jsx
 │   │       ├── SchoolCard.jsx
@@ -66,7 +67,7 @@ src/
 │   │       ├── AlertsPanel.jsx
 │   │       └── QuickActions.jsx
 │   ├── parent-portal/
-│   │   ├── index.jsx           ← portal da família (dados mockados)
+│   │   ├── index.jsx           ← ❌ 100% mockado
 │   │   └── components/
 │   │       ├── StudentProgressCard.jsx
 │   │       ├── SchoolAnnouncementsCard.jsx
@@ -75,23 +76,25 @@ src/
 │   │       ├── ProgressChart.jsx
 │   │       └── EducationalResourcesCard.jsx
 │   ├── student-profile/
-│   │   ├── index.jsx           ← perfil completo do aluno (dados mockados — precisa conectar)
-│   │   └── components/         ← abas: Informações, Acadêmico, Progresso, Atividades, Comunicação
+│   │   ├── index.jsx           ← ✅ conectado ao backend (Abril 2026)
+│   │   └── components/
+│   │       ├── PersonalInfoTab.jsx    ← dados reais do backend
+│   │       ├── AcademicInfoTab.jsx    ← dados reais do backend
+│   │       ├── ProgressTab.jsx        ← metricas.total_planos real; gráficos mockados
+│   │       ├── ActivitiesTab.jsx      ← planos reais via GET /v1/planos/{id}
+│   │       └── CommunicationTab.jsx   ← ❌ mockado (endpoint não existe ainda)
 │   └── not-found/
 │       └── index.jsx
 ├── styles/
-│   ├── index.css
-│   └── tailwind.css
 ├── utils/
 │   └── cn.js
 ├── App.jsx
-├── Routes.jsx              ← definição de rotas
+├── Routes.jsx
 └── index.jsx
 ```
 
 ## API — Configuração Central (src/api/api.js)
 ```javascript
-// Base URL vem da variável de ambiente
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 const API_PREFIX = "/v1";
 
@@ -100,14 +103,14 @@ export const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-// Interceptor JWT — adiciona token automaticamente
+// Token JWT automático
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-// Interceptor 401 — redireciona para login
+// 401 → redireciona para login
 api.interceptors.response.use(res => res, err => {
   if (err?.response?.status === 401) {
     localStorage.removeItem("token");
@@ -115,9 +118,17 @@ api.interceptors.response.use(res => res, err => {
   }
   return Promise.reject(err);
 });
+
+// Funções disponíveis em api.js:
+export async function getAlunos()              // GET /v1/alunos/
+export async function createAluno(aluno)       // POST /v1/alunos/
+export async function gerarPlanoAdaptado(payload) // POST /v1/ai/gerar_plano
+export async function getHistoricoPlanos(id)   // GET /v1/ai/historico/{id}
+export async function getAlunoMetricas(id)     // GET /v1/alunos/{id}/metricas
+export async function uploadPDF(file, alunoId) // POST /v1/pdf/ingest
 ```
 
-**SEMPRE use `api` de `src/api/api.js` para chamadas HTTP. NUNCA use `fetch` diretamente ou `axios` sem a instância centralizada.**
+**SEMPRE use `api` de `src/api/api.js`. NUNCA use `fetch` diretamente.**
 
 ## Variáveis de Ambiente (Vercel)
 ```
@@ -130,15 +141,10 @@ VITE_API_BASE_URL = https://backend-eduinclusiva-v1.onrender.com
 1. `LoginForm` chama `login(email, senha)` de `src/api/auth.js`
 2. Backend retorna `{ access_token, token_type, expires_in }`
 3. Token salvo em `localStorage` como `"token"`
-4. `GET /v1/auth/me` busca dados do usuário logado
-5. `currentUser` salvo em `localStorage` como JSON:
+4. `GET /v1/auth/me` busca dados do usuário
+5. `currentUser` salvo em `localStorage`:
 ```javascript
-{
-  id: number,
-  name: string,    // nome do usuário
-  email: string,
-  role: string     // role mapeado para o frontend
-}
+{ id, name, email, role }
 ```
 
 ### Mapeamento de Roles (Backend → Frontend)
@@ -149,7 +155,6 @@ const roleMap = {
   "professor":    "teacher",
   "familia":      "parent",
   "responsavel":  "parent",
-  "responsável":  "parent",
 };
 ```
 
@@ -163,94 +168,98 @@ const dashboardRoutes = {
 };
 ```
 
-### Hook de Autenticação (src/hooks/useAuth.js)
+### Hook useAuth (src/hooks/useAuth.js)
 ```javascript
-// Uso nos dashboards:
-const { currentUser, loading } = useAuth(['teacher']);        // só professor
-const { currentUser, loading } = useAuth(['coordinator', 'secretary']); // coord ou secretária
-const { currentUser, loading } = useAuth(['parent']);         // só família
-const { currentUser, loading } = useAuth();                   // qualquer autenticado
+const { currentUser, loading } = useAuth(['teacher']);
+const { currentUser, loading } = useAuth(['coordinator', 'secretary']);
+const { currentUser, loading } = useAuth(['parent']);
+const { currentUser, loading } = useAuth(); // qualquer autenticado
 ```
-Redireciona automaticamente para `/login` se não autenticado ou role não permitido.
 
 ## Componente Modal (src/components/ui/Modal.jsx)
 ```javascript
-// ✅ USO CORRETO
-<Modal
-  open={isOpen}        // boolean — controla abertura
-  onClose={() => setIsOpen(false)}
-  title="Título"
-  size="md"            // "sm" | "md" | "lg"
->
+// ✅ CORRETO
+<Modal open={isOpen} onClose={() => setIsOpen(false)} title="Título" size="md">
   {/* conteúdo */}
 </Modal>
 
-// ❌ NUNCA use DialogForm como modal — ele não tem prop isOpen e abre automaticamente
+// ❌ NUNCA — DialogForm não tem prop isOpen e abre automaticamente ao montar
+<DialogForm isOpen={...} />
 ```
 
-## Estado dos Dados por Página
+## Mapeamento de Campos (Backend → Frontend)
 
-### teacher-dashboard ✅ Conectado ao backend
-- Lista alunos reais via `GET /v1/alunos/`
-- Cadastra alunos via `POST /v1/alunos/` (StudentForm)
-- Gera plano IA via `POST /v1/ai/gerar_plano`
-- Histórico de planos via `GET /v1/ai/historico/{id}` (no StudentCard)
-- Upload PDF via `POST /v1/pdf/ingest`
+### Aluno
+| Campo Backend | Campo Frontend | Usado em |
+|---------------|----------------|----------|
+| `nome` | `student.name` | todos |
+| `necessidade` | `student.specialNeeds` | StudentCard, StudentHeader |
+| `escola` | `student.school` | StudentHeader, AcademicInfoTab |
+| `sala` | `student.class` / `student.grade` | StudentHeader, AcademicInfoTab |
+| `professor_nome` | `student.teacher` | StudentHeader, AcademicInfoTab |
+| `progresso_geral` | `student.overallProgress` | StudentHeader, ProgressTab |
+| `nivel_aprendizado` | `student.currentLevel` | AcademicInfoTab |
+| `objetivos_aprendizado` | `student.learningObjectives` | AcademicInfoTab |
+| `alergias` | `student.allergies` | PersonalInfoTab |
+| `medicamentos` | `student.medications` | PersonalInfoTab |
+| `endereco` | `student.address` | PersonalInfoTab |
+| `horario_aulas` | `student.schedule` | StudentHeader |
+| `matricula` | `student.registrationNumber` | StudentHeader |
+| `foto` | `student.photo` | StudentHeader |
+| `data_nascimento` | `student.birthDate` | PersonalInfoTab |
+| `genero` | `student.gender` | PersonalInfoTab |
+| `telefone_contato` | `student.phone` | PersonalInfoTab |
+| `contato_emergencia_nome` | `student.emergencyContact.name` | PersonalInfoTab |
+| `contato_emergencia_telefone` | `student.emergencyContact.phone` | PersonalInfoTab |
+| `contato_emergencia_parentesco` | `student.emergencyContact.relationship` | PersonalInfoTab |
+| `informacoes_medicas` | `student.medicalInfo` | PersonalInfoTab |
 
-### student-profile ⚠️ DADOS MOCKADOS — PRECISA CONECTAR
-- Deve buscar `GET /v1/alunos/{id}` para dados básicos
-- Deve buscar `GET /v1/planos/{aluno_id}` para planos
-- Deve buscar `GET /v1/ai/historico/{aluno_id}` para histórico IA
-- Campos que ainda não existem no backend (deixar vazio com TODO):
-  - foto/avatar, matrícula, data_nascimento, genero
-  - endereco, telefone_contato
-  - contato_emergencia (nome, telefone, parentesco)
-  - informacoes_medicas (diagnóstico, alergias, medicamentos)
-  - atividades avulsas (separadas de planos)
-  - comunicações professor-família
+### Métricas do Aluno (GET /v1/alunos/{id}/metricas)
+| Campo Backend | Usado em |
+|---------------|----------|
+| `progresso_geral` | ProgressTab |
+| `nivel_aprendizado` | ProgressTab |
+| `ultima_avaliacao` | StudentHeader |
+| `total_planos` | ProgressTab |
 
-### coordinator-dashboard ⚠️ Dados mockados
-### secretary-dashboard ⚠️ Dados mockados
-### parent-portal ⚠️ Dados mockados
+## Status de Conexão por Página
 
-## Campos Reais do Aluno no Backend
+### ✅ Conectado ao Backend
+| Página | O que está conectado |
+|--------|---------------------|
+| Login | POST /auth/login + GET /auth/me |
+| teacher-dashboard | GET/POST /alunos/, POST /ai/gerar_plano, GET /ai/historico/{id}, POST /pdf/ingest |
+| student-profile | GET /alunos/{id}, GET /alunos/{id}/metricas, GET /planos/{id}, GET /ai/historico/{id} |
+
+### ❌ Ainda Mockado (prioridade para prefeitura)
+| Página | O que falta |
+|--------|-------------|
+| coordinator-dashboard | Turmas, métricas de escola, anúncios |
+| secretary-dashboard | Escolas, métricas da rede, alertas |
+| student-profile / CommunicationTab | Mensagens professor-família |
+| teacher-dashboard / CalendarView | Eventos pedagógicos |
+| teacher-dashboard / TeachingPlanPanel | Métricas de planejamento |
+
+### ❌ Ainda Mockado (projeto público — futuro)
+| Página | O que falta |
+|--------|-------------|
+| parent-portal | Tudo — vinculação responsável→aluno, mensagens, atividades para casa |
+
+## Rotas (Routes.jsx)
 ```javascript
-{
-  id: number,
-  nome: string,
-  idade: number | null,
-  necessidade: string | null,  // "Autismo leve", "Dislexia", "TDAH"...
-  observacoes: string | null,
-  escola: string | null,
-  sala: string | null,          // "Sala A - 2º Ano"
-  professor_id: number | null,
-  criado_em: string,            // ISO datetime
-}
+/login                    → LoginPage
+/teacher-dashboard        → TeacherDashboard (role: teacher)
+/coordinator-dashboard    → CoordinatorDashboard (role: coordinator, secretary)
+/secretary-dashboard      → SecretaryDashboard (role: secretary)
+/parent-portal            → ParentPortal (role: parent)
+/student-profile/:id      → StudentProfile (navegação do teacher-dashboard)
+/student-profile/:studentId → alias existente
+/*                        → NotFound
 ```
 
-## Endpoints do Backend Disponíveis
-```
-POST /v1/auth/login           → { access_token, token_type, expires_in }
-POST /v1/auth/register        → { access_token, token_type, expires_in }
-GET  /v1/auth/me              → { id, nome, email, papel }
+## Regras Críticas
 
-GET  /v1/alunos/              → lista de alunos do professor
-GET  /v1/alunos/{id}          → dados do aluno
-POST /v1/alunos/              → cria aluno
-PUT  /v1/alunos/{id}          → atualiza aluno
-DELETE /v1/alunos/{id}        → remove aluno
-
-POST /v1/ai/gerar_plano       → gera plano adaptado via IA
-GET  /v1/ai/historico/{id}    → histórico de planos IA do aluno
-
-GET  /v1/planos/{aluno_id}    → planos do aluno
-
-POST /v1/pdf/ingest           → upload e indexação de PDF
-```
-
-## Regras Importantes
-
-### Nunca faça isso:
+### Nunca faça:
 ```javascript
 // ❌ URL hardcoded
 fetch("http://localhost:8000/v1/alunos")
@@ -259,55 +268,60 @@ fetch("http://localhost:8000/v1/alunos")
 import axios from "axios";
 axios.get("/v1/alunos")
 
-// ❌ DialogForm como modal
-<DialogForm isOpen={...} />  // não tem essa prop
+// ❌ DialogForm como modal com isOpen
+<DialogForm isOpen={isHistoryOpen} />
 
-// ❌ Hook após return condicional
+// ❌ Hook após return condicional (viola regras do React)
 if (!open) return null;
-useEffect(...) // viola regras do React
+useEffect(...)
 ```
 
-### Sempre faça assim:
+### Sempre faça:
 ```javascript
-// ✅ Usar instância centralizada
+// ✅ Instância centralizada
 import { api } from "../../api/api";
 const { data } = await api.get("/alunos/");
 
-// ✅ Modal com prop open
+// ✅ Modal correto
 <Modal open={isOpen} onClose={handleClose} title="...">
 
 // ✅ Hooks antes de returns condicionais
 useEffect(...);
 if (!open) return null;
-```
 
-## Navegação para Perfil do Aluno
-O professor deve conseguir clicar no card do aluno e ir para `/student-profile/:id`.
-```javascript
-// No teacher-dashboard, ao clicar no card:
-import { useNavigate } from "react-router-dom";
-const navigate = useNavigate();
-navigate(`/student-profile/${student.id}`);
-
-// Na página student-profile:
-import { useParams } from "react-router-dom";
-const { id } = useParams();
-// buscar GET /v1/alunos/{id}
+// ✅ Promise.allSettled para múltiplas chamadas em paralelo
+const [r1, r2, r3] = await Promise.allSettled([
+  api.get(`/alunos/${id}`),
+  api.get(`/alunos/${id}/metricas`),
+  api.get(`/planos/${id}`),
+]);
 ```
 
 ## Problemas Já Resolvidos (não reverter)
 - ✅ `Modal.jsx` — useEffect antes do return condicional
-- ✅ `StudentCard.jsx` — usa `Modal` ao invés de `DialogForm`
+- ✅ `StudentCard.jsx` — usa `Modal` ao invés de `DialogForm`; URL localhost removida
 - ✅ `vercel.json` — rewrite para SPA routing
 - ✅ CORS — `ALLOW_ORIGIN_REGEX` no Render
-- ✅ `VITE_API_BASE_URL` no Vercel
+- ✅ `VITE_API_BASE_URL` configurado no Vercel
 - ✅ Case-sensitivity — `Modal.jsx` com M maiúsculo
 - ✅ `isDialogOpen` state declarado no teacher-dashboard
 - ✅ `useAuth` hook centralizado em src/hooks/useAuth.js
+- ✅ `StudentForm.jsx` — cadastro real de aluno com JWT
+- ✅ `student-profile` — conectado ao backend com Promise.allSettled
+- ✅ `getAlunoMetricas` adicionado em api.js
 
 ## Usuário de Teste
 ```
 Email: leo@eduinclusiva.com
 Senha: Teste123!
 Role:  professor (teacher no frontend)
+ID:    1
+Aluno cadastrado: João Pedro Silva (ID: 1)
 ```
+
+## Próximos Passos (Projeto Prefeitura)
+1. Conectar `coordinator-dashboard` ao backend (precisa criar endpoints de turmas/escolas)
+2. Conectar `secretary-dashboard` ao backend (precisa criar endpoints de rede/métricas)
+3. Implementar comunicação professor-família (novo model + endpoints)
+4. Conectar calendário de eventos
+5. Implementar métricas reais de progresso por disciplina

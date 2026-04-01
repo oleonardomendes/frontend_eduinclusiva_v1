@@ -3,7 +3,7 @@ import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-const ProgressTab = ({ student, currentUser, historico }) => {
+const ProgressTab = ({ student, currentUser, historico, metricas }) => {
   const [selectedPeriod, setSelectedPeriod] = useState('semester');
   const [selectedSubject, setSelectedSubject] = useState('all');
 
@@ -273,7 +273,9 @@ const ProgressTab = ({ student, currentUser, historico }) => {
               </div>
               <div>
                 <p className="text-muted-foreground">Atividades Concluídas</p>
-                <p className="font-semibold text-foreground text-lg">127</p>
+                <p className="font-semibold text-foreground text-lg">
+                  {metricas?.total_planos ?? historico?.length ?? 0}
+                </p>
               </div>
               <div>
                 <p className="text-muted-foreground">Próxima Meta</p>
