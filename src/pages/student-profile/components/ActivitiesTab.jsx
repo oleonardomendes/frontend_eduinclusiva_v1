@@ -1,15 +1,65 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import Select from '../../../components/ui/Select';
+import AtividadeModal from '../../../components/ui/AtividadeModal';
+import { gerarAtividade, getAtividadesGeradas } from '../../../api/api';
+
+function DifficultyBadge({ dificuldade }) {
+  const map = {
+    fácil: 'bg-success/10 text-success border-success/20',
+    facil: 'bg-success/10 text-success border-success/20',
+    médio: 'bg-warning/10 text-warning border-warning/20',
+    medio: 'bg-warning/10 text-warning border-warning/20',
+    difícil: 'bg-destructive/10 text-destructive border-destructive/20',
+    dificil: 'bg-destructive/10 text-destructive border-destructive/20',
+  };
+  const key = dificuldade?.toLowerCase?.() || '';
+  const cls = map[key] || 'bg-muted text-muted-foreground border-border';
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${cls}`}>
+      {dificuldade}
+    </span>
+  );
+}
 
 const ActivitiesTab = ({ student, currentUser, planos }) => {
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateActivity, setShowCreateActivity] = useState(false);
 
+  // atividades geradas via IA
+  const [atividadesGeradas, setAtividadesGeradas] = useState([]);
+  const [atividadeAtual, setAtividadeAtual] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [loadingGerar, setLoadingGerar] = useState(false);
+  const [erroGerar, setErroGerar] = useState(null);
+
   const canCreateActivity = currentUser?.role === 'teacher' || currentUser?.role === 'coordinator';
+
+  useEffect(() => {
+    if (!student?.id) return;
+    getAtividadesGeradas(student.id)
+      .then((data) => setAtividadesGeradas(Array.isArray(data) ? data : []))
+      .catch(() => setAtividadesGeradas([]));
+  }, [student?.id]);
+
+  async function handleGerarAtividade() {
+    setLoadingGerar(true);
+    setErroGerar(null);
+    try {
+      const atividade = await gerarAtividade(student.id);
+      setAtividadesGeradas((prev) => [atividade, ...prev]);
+      setAtividadeAtual(atividade);
+      setIsModalOpen(true);
+    } catch (err) {
+      console.error('Erro ao gerar atividade:', err);
+      setErroGerar('Não foi possível gerar a atividade. Tente novamente.');
+    } finally {
+      setLoadingGerar(false);
+    }
+  }
 
   const activities = Array.isArray(planos) && planos.length > 0
     ? planos.map((plano, i) => ({
@@ -64,27 +114,19 @@ const ActivitiesTab = ({ student, currentUser, planos }) => {
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'completed':
-        return { icon: 'CheckCircle', color: 'text-success' };
-      case 'in_progress':
-        return { icon: 'Clock', color: 'text-warning' };
-      case 'assigned':
-        return { icon: 'Calendar', color: 'text-primary' };
-      default:
-        return { icon: 'Circle', color: 'text-muted-foreground' };
+      case 'completed': return { icon: 'CheckCircle', color: 'text-success' };
+      case 'in_progress': return { icon: 'Clock', color: 'text-warning' };
+      case 'assigned': return { icon: 'Calendar', color: 'text-primary' };
+      default: return { icon: 'Circle', color: 'text-muted-foreground' };
     }
   };
 
   const getStatusLabel = (status) => {
     switch (status) {
-      case 'completed':
-        return 'Concluída';
-      case 'in_progress':
-        return 'Em Andamento';
-      case 'assigned':
-        return 'Atribuída';
-      default:
-        return 'Desconhecido';
+      case 'completed': return 'Concluída';
+      case 'in_progress': return 'Em Andamento';
+      case 'assigned': return 'Atribuída';
+      default: return 'Desconhecido';
     }
   };
 
@@ -105,19 +147,83 @@ const ActivitiesTab = ({ student, currentUser, planos }) => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h3 className="text-lg font-semibold text-foreground">Atividades e Exercícios</h3>
-        {canCreateActivity && (
-          <Button
-            variant="default"
-            onClick={() => setShowCreateActivity(true)}
-            iconName="Plus"
-            iconPosition="left"
-          >
-            Nova Atividade
-          </Button>
-        )}
+        <div className="flex items-center gap-2 flex-wrap">
+          {canCreateActivity && (
+            <>
+              <Button
+                variant="secondary"
+                onClick={handleGerarAtividade}
+                iconName={loadingGerar ? 'Loader2' : 'Sparkles'}
+                iconPosition="left"
+                disabled={loadingGerar}
+              >
+                {loadingGerar ? 'Gerando...' : 'Gerar Nova Atividade IA'}
+              </Button>
+              <Button
+                variant="default"
+                onClick={() => setShowCreateActivity(true)}
+                iconName="Plus"
+                iconPosition="left"
+              >
+                Nova Atividade
+              </Button>
+            </>
+          )}
+        </div>
       </div>
+
+      {/* Erro de geração */}
+      {erroGerar && (
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+          <Icon name="AlertCircle" size={16} className="shrink-0" />
+          {erroGerar}
+        </div>
+      )}
+
+      {/* Atividades geradas por IA */}
+      {atividadesGeradas.length > 0 && (
+        <div className="space-y-3">
+          <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <Icon name="Sparkles" size={15} className="text-primary" />
+            Atividades Geradas por IA
+          </h4>
+          <div className="space-y-2">
+            {atividadesGeradas.map((at, i) => (
+              <div
+                key={at.id ?? i}
+                className="flex items-center justify-between p-4 border border-border rounded-lg bg-card hover:shadow-educational transition-educational"
+              >
+                <div className="flex-1 min-w-0 space-y-1">
+                  <p className="text-sm font-medium text-foreground truncate">{at.titulo || `Atividade ${i + 1}`}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {at.criado_em && (
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(at.criado_em).toLocaleDateString('pt-BR')}
+                      </span>
+                    )}
+                    {at.dificuldade && <DifficultyBadge dificuldade={at.dificuldade} />}
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  iconName="Eye"
+                  iconPosition="left"
+                  onClick={() => {
+                    setAtividadeAtual(at);
+                    setIsModalOpen(true);
+                  }}
+                >
+                  Ver detalhes
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Filters and Search */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex-1">
@@ -137,6 +243,7 @@ const ActivitiesTab = ({ student, currentUser, planos }) => {
           />
         </div>
       </div>
+
       {/* Activities List */}
       <div className="space-y-4">
         {filteredActivities?.map((activity) => {
@@ -144,7 +251,6 @@ const ActivitiesTab = ({ student, currentUser, planos }) => {
           return (
             <div key={activity?.id} className="bg-card border border-border rounded-lg p-6 hover:shadow-educational transition-educational">
               <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between space-y-4 lg:space-y-0">
-                {/* Activity Info */}
                 <div className="flex-1 space-y-3">
                   <div className="flex items-start space-x-3">
                     <Icon name={statusInfo?.icon} size={20} className={`mt-0.5 ${statusInfo?.color}`} />
@@ -157,7 +263,6 @@ const ActivitiesTab = ({ student, currentUser, planos }) => {
                           </span>
                         )}
                       </div>
-                      
                       <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
                         <span className="flex items-center space-x-1">
                           <Icon name="BookOpen" size={14} />
@@ -175,14 +280,14 @@ const ActivitiesTab = ({ student, currentUser, planos }) => {
                           <Icon name="Clock" size={14} />
                           <span>{activity?.duration}</span>
                         </span>
-                        <span className="flex items-center space-x-1">
-                          <Icon name="User" size={14} />
-                          <span>{activity?.teacher}</span>
-                        </span>
+                        {activity?.teacher && (
+                          <span className="flex items-center space-x-1">
+                            <Icon name="User" size={14} />
+                            <span>{activity?.teacher}</span>
+                          </span>
+                        )}
                       </div>
-
                       <p className="text-sm text-muted-foreground mt-2">{activity?.description}</p>
-
                       {activity?.feedback && (
                         <div className="mt-3 p-3 bg-muted/50 rounded-lg border border-border">
                           <p className="text-sm text-foreground">
@@ -194,31 +299,24 @@ const ActivitiesTab = ({ student, currentUser, planos }) => {
                   </div>
                 </div>
 
-                {/* Activity Actions */}
                 <div className="flex flex-col space-y-2 lg:ml-4">
                   <div className="flex items-center space-x-2 text-sm">
                     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                       activity?.status === 'completed' ? 'bg-success/10 text-success' :
-                      activity?.status === 'in_progress'? 'bg-warning/10 text-warning' : 'bg-primary/10 text-primary'
+                      activity?.status === 'in_progress' ? 'bg-warning/10 text-warning' : 'bg-primary/10 text-primary'
                     }`}>
                       {getStatusLabel(activity?.status)}
                     </span>
                   </div>
-                  
                   <div className="text-xs text-muted-foreground">
-                    {activity?.completedDate ? `Concluída em ${activity?.completedDate}` : 
+                    {activity?.completedDate ? `Concluída em ${activity?.completedDate}` :
                      activity?.assignedDate ? `Atribuída em ${activity?.assignedDate}` : ''}
                   </div>
-
                   {canCreateActivity && (
                     <div className="flex space-x-2">
-                      <Button variant="outline" size="sm" iconName="Eye">
-                        Ver
-                      </Button>
+                      <Button variant="outline" size="sm" iconName="Eye">Ver</Button>
                       {activity?.status !== 'completed' && (
-                        <Button variant="outline" size="sm" iconName="Edit">
-                          Editar
-                        </Button>
+                        <Button variant="outline" size="sm" iconName="Edit">Editar</Button>
                       )}
                     </div>
                   )}
@@ -228,6 +326,7 @@ const ActivitiesTab = ({ student, currentUser, planos }) => {
           );
         })}
       </div>
+
       {filteredActivities?.length === 0 && (
         <div className="text-center py-12">
           <Icon name="Search" size={48} className="text-muted-foreground mx-auto mb-4" />
@@ -237,61 +336,27 @@ const ActivitiesTab = ({ student, currentUser, planos }) => {
           </p>
         </div>
       )}
+
       {/* Create Activity Modal */}
       {showCreateActivity && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
           <div className="bg-card border border-border rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-semibold text-foreground">Nova Atividade</h3>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowCreateActivity(false)}
-              >
+              <Button variant="ghost" size="icon" onClick={() => setShowCreateActivity(false)}>
                 <Icon name="X" size={20} />
               </Button>
             </div>
-
             <div className="space-y-4">
-              <Input
-                label="Título da Atividade"
-                type="text"
-                placeholder="Digite o título da atividade"
-                required
-              />
-
+              <Input label="Título da Atividade" type="text" placeholder="Digite o título da atividade" required />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Select
-                  label="Disciplina"
-                  options={subjectOptions}
-                  placeholder="Selecione a disciplina"
-                  required
-                />
-
-                <Select
-                  label="Tipo de Atividade"
-                  options={typeOptions}
-                  placeholder="Selecione o tipo"
-                  required
-                />
+                <Select label="Disciplina" options={subjectOptions} placeholder="Selecione a disciplina" required />
+                <Select label="Tipo de Atividade" options={typeOptions} placeholder="Selecione o tipo" required />
               </div>
-
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Select
-                  label="Nível de Dificuldade"
-                  options={difficultyOptions}
-                  placeholder="Selecione a dificuldade"
-                  required
-                />
-
-                <Input
-                  label="Duração Estimada"
-                  type="text"
-                  placeholder="Ex: 30 min"
-                  required
-                />
+                <Select label="Nível de Dificuldade" options={difficultyOptions} placeholder="Selecione a dificuldade" required />
+                <Input label="Duração Estimada" type="text" placeholder="Ex: 30 min" required />
               </div>
-
               <div className="space-y-3">
                 <label className="text-sm font-medium text-foreground">Descrição da Atividade</label>
                 <textarea
@@ -300,7 +365,6 @@ const ActivitiesTab = ({ student, currentUser, planos }) => {
                   placeholder="Descreva os objetivos e metodologia da atividade..."
                 />
               </div>
-
               <div className="space-y-3">
                 <label className="text-sm font-medium text-foreground">Objetivos de Aprendizagem</label>
                 <textarea
@@ -309,32 +373,16 @@ const ActivitiesTab = ({ student, currentUser, planos }) => {
                   placeholder="Liste os objetivos específicos que esta atividade pretende alcançar..."
                 />
               </div>
-
-              <Input
-                label="Data de Atribuição"
-                type="date"
-                required
-              />
+              <Input label="Data de Atribuição" type="date" required />
             </div>
-
             <div className="flex justify-end space-x-3 mt-6">
-              <Button
-                variant="outline"
-                onClick={() => setShowCreateActivity(false)}
-              >
-                Cancelar
-              </Button>
-              <Button
-                variant="default"
-                iconName="Save"
-                iconPosition="left"
-              >
-                Criar Atividade
-              </Button>
+              <Button variant="outline" onClick={() => setShowCreateActivity(false)}>Cancelar</Button>
+              <Button variant="default" iconName="Save" iconPosition="left">Criar Atividade</Button>
             </div>
           </div>
         </div>
       )}
+
       {/* Activity Statistics */}
       <div className="bg-muted/30 border border-border rounded-lg p-6">
         <h4 className="text-md font-medium text-foreground mb-4">Estatísticas de Atividades</h4>
@@ -359,6 +407,17 @@ const ActivitiesTab = ({ student, currentUser, planos }) => {
           </div>
         </div>
       </div>
+
+      {/* Modal de atividade gerada */}
+      {isModalOpen && atividadeAtual && (
+        <AtividadeModal
+          atividade={atividadeAtual}
+          onClose={() => {
+            setIsModalOpen(false);
+            setAtividadeAtual(null);
+          }}
+        />
+      )}
     </div>
   );
 };

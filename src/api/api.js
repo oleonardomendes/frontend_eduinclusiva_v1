@@ -135,6 +135,16 @@ export async function getHistoricoPlanos(alunoId) {
   return data;
 }
 
+export async function gerarAtividade(aluno_id) {
+  const { data } = await api.post("/ai/gerar_atividade", { aluno_id });
+  return data;
+}
+
+export async function getAtividadesGeradas(aluno_id) {
+  const { data } = await api.get(`/ai/atividades/${aluno_id}`);
+  return data;
+}
+
 // ========== UPLOAD DE ATIVIDADES (PDF/TEXTO) ==========
 export async function uploadPDF(file, alunoId, extra = {}) {
   // extra pode conter { tipo: 'resposta', descricao: '...' } se seu ingest aceitar

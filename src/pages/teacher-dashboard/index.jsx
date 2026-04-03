@@ -16,7 +16,8 @@ import Button from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
 import StudentForm from "../../components/ui/StudentForm";
 
-import { getAlunos, gerarPlanoAdaptado, getMetas, getAvaliacoesResumo, createMeta } from "../../api/api";
+import { getAlunos, gerarPlanoAdaptado, getMetas, getAvaliacoesResumo, createMeta, gerarAtividade } from "../../api/api";
+import AtividadeModal from "../../components/ui/AtividadeModal";
 
 export default function TeacherDashboard() {
   const navigate = useNavigate();
@@ -36,6 +37,11 @@ export default function TeacherDashboard() {
   const [isStudentFormOpen, setIsStudentFormOpen] = useState(false);
 
   const [generatedPlan, setGeneratedPlan] = useState(null);
+
+  // atividade gerada via IA
+  const [atividadeGerada, setAtividadeGerada] = useState(null);
+  const [isAtividadeModalOpen, setIsAtividadeModalOpen] = useState(false);
+  const [gerandoIds, setGerandoIds] = useState(new Set());
 
   // ✅ CADEADO: só abre modal quando usuário clicou em algo
   const allowOpenRef = useRef(false);
@@ -121,6 +127,24 @@ export default function TeacherDashboard() {
     } catch (err) {
       console.error("Erro ao gerar plano:", err);
       alert("Erro ao gerar plano adaptado.");
+    }
+  }
+
+  async function handleGerarAtividade(student) {
+    setGerandoIds((prev) => new Set(prev).add(student.id));
+    try {
+      const atividade = await gerarAtividade(student.id);
+      setAtividadeGerada(atividade);
+      setIsAtividadeModalOpen(true);
+    } catch (err) {
+      console.error("Erro ao gerar atividade:", err);
+      alert("Não foi possível gerar a atividade. Tente novamente.");
+    } finally {
+      setGerandoIds((prev) => {
+        const next = new Set(prev);
+        next.delete(student.id);
+        return next;
+      });
     }
   }
 
@@ -270,11 +294,12 @@ function handleQuickAction(action) {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleGenerateAIPlan(student)}
-                              iconName="Sparkles"
+                              onClick={() => handleGerarAtividade(student)}
+                              iconName={gerandoIds.has(student.id) ? "Loader2" : "Sparkles"}
                               iconPosition="left"
+                              disabled={gerandoIds.has(student.id)}
                             >
-                              Gerar Plano IA
+                              {gerandoIds.has(student.id) ? "Gerando..." : "Gerar Atividade IA"}
                             </Button>
                           </div>
                         </div>
@@ -368,6 +393,16 @@ function handleQuickAction(action) {
         onClose={closeActivityBuilder}
         onSave={(payload) => console.log("[ActivityBuilder] onSave payload:", payload)}
       />
+
+      {isAtividadeModalOpen && atividadeGerada && (
+        <AtividadeModal
+          atividade={atividadeGerada}
+          onClose={() => {
+            setIsAtividadeModalOpen(false);
+            setAtividadeGerada(null);
+          }}
+        />
+      )}
     </div>
   );
 }
