@@ -3,7 +3,7 @@ import Icon from '../../../components/AppIcon';
 import Image from '../../../components/AppImage';
 import Button from '../../../components/ui/Button';
 
-const StudentHeader = ({ student, currentUser, onEditProfile, onUploadPhoto }) => {
+const StudentHeader = ({ student, currentUser, onEditProfile, onUploadPhoto, onGerarAtividade }) => {
   const canEdit = currentUser?.role === 'teacher' || currentUser?.role === 'coordinator';
   
   const getAgeFromBirthDate = (birthDate) => {
@@ -100,6 +100,15 @@ const StudentHeader = ({ student, currentUser, onEditProfile, onUploadPhoto }) =
             {/* Action Buttons */}
             {canEdit && (
               <div className="flex flex-col space-y-2">
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={onGerarAtividade}
+                  iconName="Sparkles"
+                  iconPosition="left"
+                >
+                  Gerar Atividade IA
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"

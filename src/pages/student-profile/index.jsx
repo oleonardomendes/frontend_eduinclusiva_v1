@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import MainNavigation from '../../components/ui/MainNavigation';
 import BreadcrumbNavigation from '../../components/ui/BreadcrumbNavigation';
@@ -21,6 +21,7 @@ const StudentProfile = () => {
   const [metricas, setMetricas] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isNavCollapsed, setIsNavCollapsed] = useState(false);
+  const activitiesTabRef = useRef(null);
   const navigate = useNavigate();
   const { studentId } = useParams();
 
@@ -149,6 +150,13 @@ const StudentProfile = () => {
     console.log('Updating academic info:', updatedData);
   };
 
+  const handleGerarAtividade = () => {
+    setActiveTab('activities');
+    setTimeout(() => {
+      activitiesTabRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  };
+
   const handleEditProfile = () => {
     console.log('Edit profile clicked');
   };
@@ -213,6 +221,7 @@ const StudentProfile = () => {
             currentUser={currentUser}
             onEditProfile={handleEditProfile}
             onUploadPhoto={handleUploadPhoto}
+            onGerarAtividade={handleGerarAtividade}
           />
 
           <div className="mt-8">
@@ -235,7 +244,7 @@ const StudentProfile = () => {
               </nav>
             </div>
 
-            <div className="mt-8">
+            <div ref={activitiesTabRef} className="mt-8">
               {ActiveTabComponent && (
                 <ActiveTabComponent
                   student={student}

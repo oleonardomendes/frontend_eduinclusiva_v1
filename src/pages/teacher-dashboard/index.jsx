@@ -309,7 +309,7 @@ function handleQuickAction(action) {
                 </div>
 
                 <div className="w-full">
-                  <QuickActionsPanel onActionClick={handleQuickAction} />
+                  <QuickActionsPanel onActionClick={handleQuickAction} students={students} />
                 </div>
               </div>
             )}
@@ -335,7 +335,7 @@ function handleQuickAction(action) {
                   />
                 </div>
                 <div className="w-full">
-                  <QuickActionsPanel onActionClick={handleQuickAction} />
+                  <QuickActionsPanel onActionClick={handleQuickAction} students={students} />
                 </div>
               </div>
             )}
