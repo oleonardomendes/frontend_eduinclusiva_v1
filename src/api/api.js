@@ -135,8 +135,8 @@ export async function getHistoricoPlanos(alunoId) {
   return data;
 }
 
-export async function gerarAtividade(aluno_id) {
-  const { data } = await api.post("/ai/gerar_atividade", { aluno_id });
+export async function gerarAtividade(aluno_id, parametros = {}) {
+  const { data } = await api.post("/ai/gerar_atividade", { aluno_id, ...parametros });
   return data;
 }
 

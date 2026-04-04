@@ -4,37 +4,34 @@ import Modal from "./Modal";
 import Icon from "../AppIcon";
 import Button from "./Button";
 
-function DifficultyBadge({ dificuldade }) {
-  const map = {
-    fácil: "bg-success/10 text-success border-success/20",
-    facil: "bg-success/10 text-success border-success/20",
-    médio: "bg-warning/10 text-warning border-warning/20",
-    medio: "bg-warning/10 text-warning border-warning/20",
-    difícil: "bg-destructive/10 text-destructive border-destructive/20",
-    dificil: "bg-destructive/10 text-destructive border-destructive/20",
-  };
-  const key = dificuldade?.toLowerCase?.() || "";
-  const cls = map[key] || "bg-muted text-muted-foreground border-border";
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${cls}`}>
-      {dificuldade}
-    </span>
-  );
-}
+const FONTE_CONFIG = {
+  ia_nova:        { emoji: "✨", label: "Gerada por IA", cls: "bg-purple-100 text-purple-700 border-purple-200" },
+  ia_reutilizada: { emoji: "♻️", label: "Reutilizada",   cls: "bg-blue-100 text-blue-700 border-blue-200"     },
+  template:       { emoji: "📚", label: "Template",      cls: "bg-green-100 text-green-700 border-green-200"  },
+};
 
-function Badge({ children, icon }) {
+const DIFICULDADE_CLS = {
+  "fácil":  "bg-green-100 text-green-700 border-green-200",
+  "facil":  "bg-green-100 text-green-700 border-green-200",
+  "médio":  "bg-yellow-100 text-yellow-700 border-yellow-200",
+  "medio":  "bg-yellow-100 text-yellow-700 border-yellow-200",
+  "difícil":"bg-red-100 text-red-700 border-red-200",
+  "dificil":"bg-red-100 text-red-700 border-red-200",
+};
+
+function PillBadge({ icon, children, cls }) {
   return (
-    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-xs font-medium">
-      {icon && <Icon name={icon} size={12} />}
+    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${cls}`}>
+      {icon && <Icon name={icon} size={11} />}
       {children}
     </span>
   );
 }
 
-function Section({ iconName, iconClass = "text-primary", title, children }) {
+function SectionCard({ iconName, iconClass, title, bg = "bg-muted/30", children }) {
   return (
-    <div>
-      <h4 className="flex items-center gap-2 text-sm font-semibold text-foreground mb-2">
+    <div className={`rounded-lg p-4 ${bg}`}>
+      <h4 className="flex items-center gap-2 text-sm font-semibold text-foreground mb-3">
         <Icon name={iconName} size={15} className={iconClass} />
         {title}
       </h4>
@@ -43,51 +40,72 @@ function Section({ iconName, iconClass = "text-primary", title, children }) {
   );
 }
 
-function OrderedList({ items }) {
-  if (!Array.isArray(items) || items.length === 0) return <p className="text-sm text-muted-foreground">—</p>;
+function TextBlock({ iconName, iconClass, title, bg, text, preWrap, italic }) {
+  if (!text) return null;
   return (
-    <ol className="space-y-1.5 list-none">
-      {items.map((item, i) => (
-        <li key={i} className="flex gap-2 text-sm text-foreground">
-          <span className="shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center mt-0.5">
-            {i + 1}
-          </span>
-          <span>{typeof item === "string" ? item : item?.descricao || item?.texto || JSON.stringify(item)}</span>
-        </li>
-      ))}
-    </ol>
+    <SectionCard iconName={iconName} iconClass={iconClass} title={title} bg={bg}>
+      <p className={`text-sm text-foreground leading-relaxed${preWrap ? " whitespace-pre-line" : ""}${italic ? " italic" : ""}`}>
+        {text}
+      </p>
+    </SectionCard>
   );
 }
 
-function IconList({ items, iconName, iconClass }) {
-  if (!Array.isArray(items) || items.length === 0) return <p className="text-sm text-muted-foreground">—</p>;
+function ListBlock({ iconName, iconClass, title, bg, items, prefix }) {
+  if (!Array.isArray(items) || items.length === 0) return null;
+  const toStr = (item) =>
+    typeof item === "string" ? item : item?.texto || item?.descricao || JSON.stringify(item);
+
   return (
-    <ul className="space-y-1.5">
-      {items.map((item, i) => (
-        <li key={i} className="flex gap-2 text-sm text-foreground">
-          <Icon name={iconName} size={14} className={`shrink-0 mt-0.5 ${iconClass}`} />
-          <span>{typeof item === "string" ? item : item?.descricao || item?.texto || JSON.stringify(item)}</span>
-        </li>
-      ))}
-    </ul>
+    <SectionCard iconName={iconName} iconClass={iconClass} title={title} bg={bg}>
+      {prefix === "number" ? (
+        <ol className="space-y-2">
+          {items.map((item, i) => (
+            <li key={i} className="flex gap-2 text-sm text-foreground">
+              <span className="shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center mt-0.5">
+                {i + 1}
+              </span>
+              <span>{toStr(item)}</span>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <ul className="space-y-1.5">
+          {items.map((item, i) => (
+            <li key={i} className="flex gap-2 text-sm text-foreground">
+              <span className="shrink-0 mt-0.5 leading-none text-base">{prefix}</span>
+              <span>{toStr(item)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </SectionCard>
   );
 }
 
-export default function AtividadeModal({ atividade, onClose }) {
+export default function AtividadeModal({ atividade, fonte, onClose }) {
   if (!atividade) return null;
 
   const {
     titulo,
     objetivo,
-    duracao,
-    dificuldade,
-    bimestre,
+    instrucao_professor,
+    instrucao_familia,
+    conteudo_atividade,
     passo_a_passo,
     materiais,
     adaptacoes,
     criterios_avaliacao,
     justificativa,
+    dificuldade,
+    bimestre,
+    materia,
+    duracao_minutos,
   } = atividade;
+
+  const difKey = dificuldade?.toLowerCase?.() || "";
+  const difCls = DIFICULDADE_CLS[difKey] || "bg-gray-100 text-gray-600 border-gray-200";
+  const fonteConfig = fonte ? FONTE_CONFIG[fonte] : null;
 
   return (
     <Modal
@@ -96,65 +114,113 @@ export default function AtividadeModal({ atividade, onClose }) {
       title={titulo || "Atividade Gerada por IA"}
       size="lg"
     >
-      <div className="space-y-6">
-        {/* Badges de meta-dados */}
+      <div className="space-y-5">
+
+        {/* ── Badges de meta-dados ── */}
         <div className="flex flex-wrap gap-2">
-          {dificuldade && <DifficultyBadge dificuldade={dificuldade} />}
-          {duracao && <Badge icon="Clock">{duracao}</Badge>}
-          {bimestre && <Badge icon="Calendar">{`${bimestre}º Bimestre`}</Badge>}
+          {dificuldade && (
+            <PillBadge cls={difCls}>{dificuldade}</PillBadge>
+          )}
+          {bimestre && (
+            <PillBadge icon="Calendar" cls="bg-muted text-muted-foreground border-border">
+              {bimestre}º Bimestre
+            </PillBadge>
+          )}
+          {materia && (
+            <PillBadge icon="BookOpen" cls="bg-muted text-muted-foreground border-border">
+              {materia}
+            </PillBadge>
+          )}
+          {duracao_minutos && (
+            <PillBadge icon="Clock" cls="bg-muted text-muted-foreground border-border">
+              {duracao_minutos} min
+            </PillBadge>
+          )}
+          {fonteConfig && (
+            <PillBadge cls={fonteConfig.cls}>
+              {fonteConfig.emoji} {fonteConfig.label}
+            </PillBadge>
+          )}
         </div>
 
-        {/* Objetivo */}
-        {objetivo && (
-          <Section iconName="Target" title="Objetivo">
-            <p className="text-sm text-foreground leading-relaxed">{objetivo}</p>
-          </Section>
-        )}
+        {/* ── 1. Objetivo ── */}
+        <TextBlock
+          iconName="Target" iconClass="text-primary"
+          title="Objetivo"
+          text={objetivo}
+        />
 
-        {/* Passo a passo */}
-        <Section iconName="ListOrdered" title="Passo a Passo">
-          <OrderedList items={passo_a_passo} />
-        </Section>
+        {/* ── 2. Instrução para o Professor ── */}
+        <TextBlock
+          iconName="BookOpen" iconClass="text-blue-600"
+          title="Instrução para o Professor"
+          bg="bg-blue-50"
+          text={instrucao_professor}
+        />
 
-        {/* Materiais */}
-        <Section iconName="Package" iconClass="text-secondary" title="Materiais Necessários">
-          <IconList items={materiais} iconName="Dot" iconClass="text-secondary" />
-        </Section>
+        {/* ── 3. Instrução para a Família ── */}
+        <TextBlock
+          iconName="Home" iconClass="text-green-600"
+          title="Instrução para a Família"
+          bg="bg-green-50"
+          text={instrucao_familia}
+        />
 
-        {/* Adaptações */}
-        <Section iconName="Heart" iconClass="text-rose-500" title="Adaptações">
-          <IconList items={adaptacoes} iconName="Heart" iconClass="text-rose-400" />
-        </Section>
-
-        {/* Critérios de avaliação */}
-        <Section iconName="ClipboardCheck" iconClass="text-success" title="Critérios de Avaliação">
-          <IconList items={criterios_avaliacao} iconName="CheckCircle" iconClass="text-success" />
-        </Section>
-
-        {/* Justificativa */}
-        {justificativa && (
-          <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
-            <p className="text-xs font-semibold text-primary mb-1 flex items-center gap-1">
-              <Icon name="Info" size={13} />
-              Justificativa Pedagógica
+        {/* ── 4. Conteúdo da Atividade ── */}
+        {conteudo_atividade && (
+          <SectionCard iconName="FileText" iconClass="text-gray-500" title="Conteúdo da Atividade" bg="bg-gray-50">
+            <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">
+              {conteudo_atividade}
             </p>
-            <p className="text-sm text-foreground leading-relaxed">{justificativa}</p>
-          </div>
+          </SectionCard>
         )}
 
-        {/* Ações */}
+        {/* ── 5. Passo a Passo ── */}
+        <ListBlock
+          iconName="List" iconClass="text-primary"
+          title="Passo a Passo"
+          items={passo_a_passo}
+          prefix="number"
+        />
+
+        {/* ── 6. Materiais Necessários ── */}
+        <ListBlock
+          iconName="Package" iconClass="text-secondary"
+          title="Materiais Necessários"
+          items={materiais}
+          prefix="•"
+        />
+
+        {/* ── 7. Adaptações ── */}
+        <ListBlock
+          iconName="Heart" iconClass="text-rose-500"
+          title="Adaptações"
+          items={adaptacoes}
+          prefix="♡"
+        />
+
+        {/* ── 8. Critérios de Avaliação ── */}
+        <ListBlock
+          iconName="CheckCircle" iconClass="text-green-600"
+          title="Critérios de Avaliação"
+          items={criterios_avaliacao}
+          prefix="✓"
+        />
+
+        {/* ── 9. Justificativa ── */}
+        {justificativa && (
+          <SectionCard iconName="Info" iconClass="text-yellow-600" title="Justificativa" bg="bg-yellow-50">
+            <p className="text-sm text-foreground leading-relaxed italic">{justificativa}</p>
+          </SectionCard>
+        )}
+
+        {/* ── Footer ── */}
         <div className="flex justify-end gap-2 pt-2 border-t border-border">
-          <Button
-            variant="outline"
-            size="sm"
-            iconName="Download"
-            iconPosition="left"
-            onClick={() => alert("Exportar PDF — em breve!")}
-          >
-            Salvar PDF
-          </Button>
-          <Button variant="default" size="sm" onClick={onClose}>
+          <Button variant="outline" size="sm" onClick={onClose}>
             Fechar
+          </Button>
+          <Button variant="default" size="sm" iconName="Printer" iconPosition="left" onClick={() => window.print()}>
+            Imprimir
           </Button>
         </div>
       </div>
