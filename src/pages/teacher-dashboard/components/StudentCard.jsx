@@ -38,7 +38,6 @@ const StudentCard = ({ student }) => {
           />
         )}
         <div>
-          <h3 className="font-semibold text-lg text-foreground">{student.nome || student.name}</h3>
           {student.grade && <p className="text-sm text-muted-foreground">{student.grade}</p>}
           {student.lastUpdate && (
             <p className="text-xs text-muted-foreground">

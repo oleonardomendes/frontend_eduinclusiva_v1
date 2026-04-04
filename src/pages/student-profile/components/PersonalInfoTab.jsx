@@ -4,6 +4,44 @@ import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import Select from '../../../components/ui/Select';
 
+function MedicalInfoDisplay({ value }) {
+  if (!value) return <p className="text-sm text-muted-foreground">—</p>;
+  try {
+    const parsed = typeof value === 'string' ? JSON.parse(value) : value;
+    if (parsed && typeof parsed === 'object') {
+      return (
+        <div className="space-y-2 p-3 bg-muted/30 rounded-lg border border-border text-sm">
+          {parsed.diagnostico && (
+            <p>
+              <span className="font-medium text-foreground">Diagnóstico: </span>
+              <span className="text-muted-foreground">{parsed.diagnostico}</span>
+            </p>
+          )}
+          {parsed.alergias && (
+            <p>
+              <span className="font-medium text-foreground">Alergias: </span>
+              <span className="text-muted-foreground">{parsed.alergias}</span>
+            </p>
+          )}
+          {parsed.medicamentos && (
+            <p>
+              <span className="font-medium text-foreground">Medicamentos: </span>
+              <span className="text-muted-foreground">{parsed.medicamentos}</span>
+            </p>
+          )}
+        </div>
+      );
+    }
+  } catch {
+    // JSON inválido — exibe como texto simples
+  }
+  return (
+    <p className="text-sm text-muted-foreground p-3 bg-muted/30 rounded-lg border border-border">
+      {value}
+    </p>
+  );
+}
+
 const PersonalInfoTab = ({ student, currentUser, onUpdateStudent }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -193,14 +231,17 @@ const PersonalInfoTab = ({ student, currentUser, onUpdateStudent }) => {
 
           <div className="space-y-3">
             <label className="text-sm font-medium text-foreground">Informações Médicas</label>
-            <textarea
-              className="w-full p-3 border border-border rounded-lg bg-input text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
-              rows={3}
-              value={formData?.medicalInfo}
-              onChange={(e) => handleInputChange('medicalInfo', e?.target?.value)}
-              disabled={!isEditing}
-              placeholder="Condições médicas relevantes para o aprendizado..."
-            />
+            {isEditing ? (
+              <textarea
+                className="w-full p-3 border border-border rounded-lg bg-input text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+                rows={3}
+                value={formData?.medicalInfo}
+                onChange={(e) => handleInputChange('medicalInfo', e?.target?.value)}
+                placeholder="Condições médicas relevantes para o aprendizado..."
+              />
+            ) : (
+              <MedicalInfoDisplay value={formData?.medicalInfo} />
+            )}
           </div>
 
           <Input
