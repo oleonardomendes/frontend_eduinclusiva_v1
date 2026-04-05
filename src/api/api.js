@@ -145,6 +145,11 @@ export async function getAtividadesGeradas(aluno_id) {
   return data;
 }
 
+export async function concluirAtividade(atividade_id, payload) {
+  const { data } = await api.patch(`/ai/atividades/${atividade_id}/concluir`, payload);
+  return data;
+}
+
 // ========== UPLOAD DE ATIVIDADES (PDF/TEXTO) ==========
 export async function uploadPDF(file, alunoId, extra = {}) {
   // extra pode conter { tipo: 'resposta', descricao: '...' } se seu ingest aceitar

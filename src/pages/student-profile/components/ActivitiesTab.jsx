@@ -4,9 +4,9 @@ import Button from '../../../components/ui/Button';
 import Select from '../../../components/ui/Select';
 import Modal from '../../../components/ui/Modal';
 import AtividadeModal from '../../../components/ui/AtividadeModal';
-import { gerarAtividade, getAtividadesGeradas, api } from '../../../api/api';
+import { gerarAtividade, getAtividadesGeradas, concluirAtividade } from '../../../api/api';
 
-// ── Opções dos selects do formulário de geração ───────────────────────────────
+// ── Opções formulário de geração ──────────────────────────────────────────────
 const DISCIPLINAS = [
   { value: 'Geral',           label: 'Geral'           },
   { value: 'Matemática',      label: 'Matemática'      },
@@ -29,7 +29,16 @@ const DIFICULDADES = [
   { value: 'Difícil', label: 'Difícil' },
 ];
 
-// Mapa de classes para badge de dificuldade
+// ── Competências avaliadas na conclusão ───────────────────────────────────────
+const COMPETENCIAS = [
+  { key: 'comunicacao',  label: 'Comunicação',       campo: 'nota_comunicacao'        },
+  { key: 'coordenacao',  label: 'Coord. Motora',     campo: 'nota_coordenacao_motora' },
+  { key: 'cognicao',     label: 'Cognição',          campo: 'nota_cognicao'           },
+  { key: 'socializacao', label: 'Socialização',      campo: 'nota_socializacao'       },
+  { key: 'autonomia',    label: 'Autonomia',         campo: 'nota_autonomia'          },
+  { key: 'linguagem',    label: 'Linguagem',         campo: 'nota_linguagem'          },
+];
+
 const DIFICULDADE_CLS = {
   'fácil':  'bg-green-100 text-green-700 border-green-200',
   'facil':  'bg-green-100 text-green-700 border-green-200',
@@ -42,15 +51,16 @@ const DIFICULDADE_CLS = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const ActivitiesTab = ({ student, currentUser }) => {
-  // ── atividades geradas via IA ──────────────────────────────────────────────
+  // ── atividades geradas ────────────────────────────────────────────────────
   const [atividadesGeradas, setAtividadesGeradas] = useState([]);
   const [atividadeAtual, setAtividadeAtual]       = useState(null);
   const [fonteAtual, setFonteAtual]               = useState(null);
   const [isModalOpen, setIsModalOpen]             = useState(false);
   const [loadingGerar, setLoadingGerar]           = useState(false);
   const [erroGerar, setErroGerar]                 = useState(null);
+  const [sucessoConclusao, setSucessoConclusao]   = useState(false);
 
-  // ── formulário de geração ──────────────────────────────────────────────────
+  // ── formulário de geração ─────────────────────────────────────────────────
   const [form, setForm] = useState({
     disciplina:            'Geral',
     tipo:                  'Exercício prático',
@@ -60,17 +70,19 @@ const ActivitiesTab = ({ student, currentUser }) => {
     objetivos_especificos: '',
   });
 
-  // ── modal de conclusão ─────────────────────────────────────────────────────
-  const [conclusaoId, setConclusaoId]           = useState(null);
-  const [isConfirmOpen, setIsConfirmOpen]       = useState(false);
-  const [obsText, setObsText]                   = useState('');
-  const [loadingConcluir, setLoadingConcluir]   = useState(false);
-  const [erroConcluir, setErroConcluir]         = useState(null);
+  // ── modal de conclusão ────────────────────────────────────────────────────
+  const [conclusaoId, setConclusaoId]                   = useState(null);
+  const [isConfirmOpen, setIsConfirmOpen]               = useState(false);
+  const [obsText, setObsText]                           = useState('');
+  const [competenciasSelecionadas, setCompetenciasSelecionadas] = useState(new Set());
+  const [notas, setNotas]                               = useState({});
+  const [loadingConcluir, setLoadingConcluir]           = useState(false);
+  const [erroConcluir, setErroConcluir]                 = useState(null);
 
   const canCreateActivity =
     currentUser?.role === 'teacher' || currentUser?.role === 'coordinator';
 
-  // ── carregar atividades geradas ────────────────────────────────────────────
+  // ── carregar atividades geradas ───────────────────────────────────────────
   useEffect(() => {
     if (!student?.id) return;
     getAtividadesGeradas(student.id)
@@ -78,7 +90,7 @@ const ActivitiesTab = ({ student, currentUser }) => {
       .catch(() => setAtividadesGeradas([]));
   }, [student?.id]);
 
-  // ── gerar nova atividade ───────────────────────────────────────────────────
+  // ── gerar nova atividade ──────────────────────────────────────────────────
   async function handleGerarAtividade(e) {
     e.preventDefault();
     setLoadingGerar(true);
@@ -92,7 +104,7 @@ const ActivitiesTab = ({ student, currentUser }) => {
       ...(form.objetivos_especificos ? { objetivos_especificos: form.objetivos_especificos } : {}),
     };
     try {
-      const result = await gerarAtividade(student.id, parametros);
+      const result   = await gerarAtividade(student.id, parametros);
       const atividade = result?.atividade ?? result;
       const fonte     = result?.fonte     ?? 'ia_nova';
       setAtividadesGeradas((prev) => [atividade, ...prev]);
@@ -106,23 +118,56 @@ const ActivitiesTab = ({ student, currentUser }) => {
     }
   }
 
-  // ── concluir atividade ─────────────────────────────────────────────────────
+  // ── abrir modal de conclusão ──────────────────────────────────────────────
   function abrirConclusao(id) {
     setConclusaoId(id);
     setObsText('');
+    setCompetenciasSelecionadas(new Set());
+    setNotas({});
     setErroConcluir(null);
     setIsConfirmOpen(true);
   }
 
+  // ── confirmar conclusão ───────────────────────────────────────────────────
   async function handleConcluir() {
     setLoadingConcluir(true);
     setErroConcluir(null);
+
+    const parseNota = (key) => {
+      if (!competenciasSelecionadas.has(key)) return null;
+      const val = notas[key];
+      if (val === '' || val === undefined || val === null) return null;
+      const n = parseFloat(val);
+      return isNaN(n) ? null : n;
+    };
+
+    const payload = {
+      observacoes:              obsText || null,
+      competencias_trabalhadas: Array.from(competenciasSelecionadas),
+      nota_comunicacao:         parseNota('comunicacao'),
+      nota_coordenacao_motora:  parseNota('coordenacao'),
+      nota_cognicao:            parseNota('cognicao'),
+      nota_socializacao:        parseNota('socializacao'),
+      nota_autonomia:           parseNota('autonomia'),
+      nota_linguagem:           parseNota('linguagem'),
+    };
+
     try {
-      await api.patch(`/ai/atividades/${conclusaoId}/concluir`, { observacoes: obsText });
+      await concluirAtividade(conclusaoId, payload);
+
+      // atualiza badge localmente
       setAtividadesGeradas((prev) =>
         prev.map((a) => (a.id === conclusaoId ? { ...a, concluida: true } : a))
       );
+
+      // recarrega a lista do servidor
+      getAtividadesGeradas(student.id)
+        .then((data) => setAtividadesGeradas(Array.isArray(data) ? data : []))
+        .catch(() => {});
+
       setIsConfirmOpen(false);
+      setSucessoConclusao(true);
+      setTimeout(() => setSucessoConclusao(false), 3000);
     } catch (err) {
       if (err?.response?.status === 404) {
         setErroConcluir('Funcionalidade em breve disponível.');
@@ -134,9 +179,34 @@ const ActivitiesTab = ({ student, currentUser }) => {
     }
   }
 
+  // ── toggle checkbox de competência ────────────────────────────────────────
+  function toggleCompetencia(key, isChecked) {
+    setCompetenciasSelecionadas((prev) => {
+      const next = new Set(prev);
+      if (isChecked) next.add(key);
+      else next.delete(key);
+      return next;
+    });
+    if (!isChecked) {
+      setNotas((n) => {
+        const m = { ...n };
+        delete m[key];
+        return m;
+      });
+    }
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
+
+      {/* ══ BANNER SUCESSO ═══════════════════════════════════════════════════ */}
+      {sucessoConclusao && (
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-green-100 border border-green-200 text-green-700 text-sm font-medium">
+          <Icon name="CheckCircle" size={16} className="shrink-0" />
+          ✅ Atividade concluída! Progresso do aluno atualizado.
+        </div>
+      )}
 
       {/* ══ PAINEL DE GERAÇÃO IA ═════════════════════════════════════════════ */}
       {canCreateActivity && (
@@ -147,7 +217,6 @@ const ActivitiesTab = ({ student, currentUser }) => {
           </h3>
 
           <form onSubmit={handleGerarAtividade} className="space-y-4">
-            {/* Disciplina + Tipo */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">Disciplina</label>
@@ -159,7 +228,6 @@ const ActivitiesTab = ({ student, currentUser }) => {
               </div>
             </div>
 
-            {/* Dificuldade + Duração */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">Nível de Dificuldade</label>
@@ -175,7 +243,6 @@ const ActivitiesTab = ({ student, currentUser }) => {
               </div>
             </div>
 
-            {/* Tema */}
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">
                 Tema / Descrição <span className="opacity-60">(opcional)</span>
@@ -188,7 +255,6 @@ const ActivitiesTab = ({ student, currentUser }) => {
               />
             </div>
 
-            {/* Objetivos */}
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">
                 Objetivos Específicos <span className="opacity-60">(opcional)</span>
@@ -234,10 +300,9 @@ const ActivitiesTab = ({ student, currentUser }) => {
 
           <div className="space-y-3">
             {atividadesGeradas.map((at, i) => {
-              const difKey  = at.dificuldade?.toLowerCase?.() || '';
-              const difCls  = DIFICULDADE_CLS[difKey] || 'bg-muted text-muted-foreground border-border';
+              const difKey   = at.dificuldade?.toLowerCase?.() || '';
+              const difCls   = DIFICULDADE_CLS[difKey] || 'bg-muted text-muted-foreground border-border';
               const concluida = !!at.concluida;
-
               return (
                 <div
                   key={at.id ?? i}
@@ -334,24 +399,77 @@ const ActivitiesTab = ({ student, currentUser }) => {
         open={isConfirmOpen}
         onClose={() => setIsConfirmOpen(false)}
         title="Concluir Atividade"
-        size="sm"
+        size="md"
       >
-        <div className="space-y-4">
-          <p className="text-sm text-foreground">Marcar atividade como concluída?</p>
+        <div className="space-y-5">
 
+          {/* SEÇÃO 1 — Competências trabalhadas */}
           <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">
-              Observações gerais <span className="opacity-60">(opcional)</span>
+            <p className="text-sm font-semibold text-foreground mb-3">
+              Quais competências foram trabalhadas?
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {COMPETENCIAS.map((c) => (
+                <label
+                  key={c.key}
+                  className="flex items-center gap-2 cursor-pointer p-2.5 rounded-lg border border-border hover:bg-muted/40 transition-colors"
+                >
+                  <input
+                    type="checkbox"
+                    checked={competenciasSelecionadas.has(c.key)}
+                    onChange={(e) => toggleCompetencia(c.key, e.target.checked)}
+                    className="w-4 h-4 accent-primary shrink-0"
+                  />
+                  <span className="text-sm text-foreground">{c.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* SEÇÃO 2 — Notas por competência (só aparece se alguma marcada) */}
+          {competenciasSelecionadas.size > 0 && (
+            <div>
+              <p className="text-sm font-semibold text-foreground mb-3">
+                Nota por competência
+                <span className="ml-1 text-xs font-normal text-muted-foreground">(0 – 10, step 0,5)</span>
+              </p>
+              <div className="space-y-2">
+                {COMPETENCIAS.filter((c) => competenciasSelecionadas.has(c.key)).map((c) => (
+                  <div
+                    key={c.key}
+                    className="flex items-center justify-between gap-4 px-3 py-2 bg-muted/30 rounded-lg border border-border"
+                  >
+                    <span className="text-sm text-foreground">{c.label}</span>
+                    <input
+                      type="number"
+                      min={0} max={10} step={0.5}
+                      value={notas[c.key] ?? ''}
+                      onChange={(e) => setNotas((n) => ({ ...n, [c.key]: e.target.value }))}
+                      placeholder="—"
+                      className="w-20 text-sm text-center border border-border rounded-lg px-2 py-1.5 bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* SEÇÃO 3 — Observações gerais */}
+          <div>
+            <label className="text-sm font-semibold text-foreground mb-2 block">
+              Observações gerais
+              <span className="ml-1 text-xs font-normal text-muted-foreground">(opcional)</span>
             </label>
             <textarea
               rows={3}
               value={obsText}
               onChange={(e) => setObsText(e.target.value)}
-              placeholder="Como foi a atividade? O aluno conseguiu realizar?"
+              placeholder="Como foi a atividade? O aluno conseguiu realizar? Anote pontos positivos e dificuldades observadas."
               className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-input text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
             />
           </div>
 
+          {/* Erro */}
           {erroConcluir && (
             <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
               <Icon name="AlertCircle" size={15} className="shrink-0" />
@@ -359,8 +477,13 @@ const ActivitiesTab = ({ student, currentUser }) => {
             </div>
           )}
 
-          <div className="flex justify-end gap-2 pt-1">
-            <Button variant="outline" size="sm" onClick={() => setIsConfirmOpen(false)} disabled={loadingConcluir}>
+          {/* Footer */}
+          <div className="flex justify-end gap-2 pt-1 border-t border-border">
+            <Button
+              variant="outline" size="sm"
+              onClick={() => setIsConfirmOpen(false)}
+              disabled={loadingConcluir}
+            >
               Cancelar
             </Button>
             <Button
@@ -369,7 +492,7 @@ const ActivitiesTab = ({ student, currentUser }) => {
               onClick={handleConcluir}
               disabled={loadingConcluir}
             >
-              {loadingConcluir ? 'Salvando…' : 'Confirmar'}
+              {loadingConcluir ? 'Salvando…' : '✓ Confirmar Conclusão'}
             </Button>
           </div>
         </div>
